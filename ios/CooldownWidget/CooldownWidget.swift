@@ -30,6 +30,16 @@ struct CooldownData: Codable, Identifiable {
     private var anchor: Date { Date(timeIntervalSince1970: targetMs / 1000) }
     private var startDate: Date { Date(timeIntervalSince1970: startMs / 1000) }
 
+    /// Dark text on very light colours (same rule as foregroundOn() in Dart).
+    var prefersDarkText: Bool {
+        func lin(_ v: Int64) -> Double {
+            let c = Double(v & 0xFF) / 255
+            return c <= 0.04045 ? c / 12.92 : pow((c + 0.055) / 1.055, 2.4)
+        }
+        let l = 0.2126 * lin(color >> 16) + 0.7152 * lin(color >> 8) + 0.0722 * lin(color)
+        return l > 0.6 && (widgetOpacity ?? 1) >= 0.5
+    }
+
     var swiftColor: Color {
         Color(
             red: Double((color >> 16) & 0xFF) / 255,
@@ -309,7 +319,7 @@ struct CooldownWidgetView: View {
                     .tint(.white)
                     .padding(.top, 4)
             }
-            .foregroundStyle(.white)
+            .foregroundStyle(c.prefersDarkText ? Color.black.opacity(0.87) : .white)
             .shadow(color: .black.opacity(opacity < 1 ? 0.4 : 0), radius: 2, y: 1)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
             .containerBackground(for: .widget) { c.swiftColor.opacity(opacity) }

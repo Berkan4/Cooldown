@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../models/cooldown.dart';
 import '../services/notifications.dart';
 import '../services/store.dart';
+import 'color_picker.dart';
 
 const _palette = <int>[
   0xFF4F7CAC, // blue
@@ -218,7 +219,8 @@ class _EditScreenState extends State<EditScreen> {
           ),
           const SizedBox(height: 8),
           Wrap(
-            spacing: 10,
+            spacing: 8,
+            runSpacing: 8,
             children: [
               for (final col in _palette)
                 GestureDetector(
@@ -229,6 +231,13 @@ class _EditScreenState extends State<EditScreen> {
                     child: _color == col ? const Icon(Icons.check, size: 18, color: Colors.white) : null,
                   ),
                 ),
+              CustomColorButton(
+                selected: _palette.contains(_color) ? null : Color(_color),
+                onTap: () async {
+                  final picked = await showCustomColorPicker(context, _color);
+                  if (picked != null) setState(() => _color = picked);
+                },
+              ),
             ],
           ),
           const SizedBox(height: 12),

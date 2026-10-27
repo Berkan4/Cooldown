@@ -7,6 +7,7 @@ import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
 import android.util.SizeF
@@ -168,6 +169,17 @@ open class CooldownWidgetProvider : AppWidgetProvider() {
             now: Long,
         ): RemoteViews {
             val views = RemoteViews(context.packageName, layout.layoutId)
+
+            // Dark text on very light colours (same rule as foregroundOn() in Dart),
+            // unless the background is mostly see-through.
+            val darkText = cooldown != null && cooldown.widgetOpacity >= 0.5 &&
+                Color.luminance(cooldown.color) > 0.6f
+            val text = if (darkText) 0xDD000000.toInt() else Color.WHITE
+            val muted = if (darkText) 0xB3000000.toInt() else 0xE6FFFFFF.toInt()
+            views.setTextColor(R.id.title, text)
+            views.setTextColor(R.id.value, text)
+            views.setTextColor(R.id.label, muted)
+            if (layout.showEnds) views.setTextColor(R.id.ends, muted)
 
             if (cooldown == null) {
                 views.setTextViewText(R.id.title, title(layout, "⏳", "Cooldown"))
