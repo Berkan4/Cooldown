@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Themed icon (Android 13+): the launcher recolours this by its alpha -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:pathData="M54,29 A25,25 0 1,1 54,79 A25,25 0 1,1 54,29"
+        android:strokeWidth="6.5"
+        android:strokeColor="#FFFFFF"
+        android:strokeAlpha="0.28" />
+    <path
+        android:pathData="M54,29 A25,25 0 1,1 29,54"
+        android:strokeWidth="6.5"
+        android:strokeColor="#FFFFFF"
+        android:strokeLineCap="round" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:fillType="evenOdd"
+        android:pathData="M45,40 L63,40 Q64.5,40 64.5,41.5 L64.5,42.5 Q64.5,44 63.5,45 L57,52.5 Q56,54 57,55.5 L63.5,63 Q64.5,64 64.5,65.5 L64.5,66.5 Q64.5,68 63,68 L45,68 Q43.5,68 43.5,66.5 L43.5,65.5 Q43.5,64 44.5,63 L51,55.5 Q52,54 51,52.5 L44.5,45 Q43.5,44 43.5,42.5 L43.5,41.5 Q43.5,40 45,40 Z M48.5,45 L59.5,45 L55,50.5 Q54,51.5 53,50.5 Z M54,58 Q55,58 56,59 L60.5,64.5 L47.5,64.5 L52,59 Q53,58 54,58 Z" />
+</vector>
