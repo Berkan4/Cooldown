@@ -1,12 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Starts at 2x2 but can be resized down to 1x1 and up to any size.
+     CooldownWidgetProvider picks a layout that fits the current size. -->
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
     android:configure="com.berkan.cooldown.CooldownConfigActivity"
     android:description="@string/widget_description"
     android:initialLayout="@layout/cooldown_widget"
     android:minWidth="110dp"
     android:minHeight="110dp"
-    android:minResizeWidth="110dp"
-    android:minResizeHeight="80dp"
+    android:minResizeWidth="40dp"
+    android:minResizeHeight="40dp"
     android:targetCellWidth="2"
     android:targetCellHeight="2"
     android:resizeMode="horizontal|vertical"

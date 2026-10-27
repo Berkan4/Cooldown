@@ -10,6 +10,7 @@ Cooldowns and countdowns for Android and iPhone, with home-screen widgets and re
 - **Time format:** days by default. You can switch to weeks + days, hours, d/h/m or automatic, app-wide in Settings or per cooldown.
 - **Widgets are optional.** Each widget shows one cooldown you pick:
   - Android: a picker appears when you add the widget (long-press the widget → reconfigure to change it). You can also tap ⋮ → "Add to home screen" in the app.
+    The widget starts at 2x2 and can be resized from 1x1 up to 4x2 and bigger. 1x1, 1x2, 2x1 (up to 4x1), 2x2 and 4x2 each get their own layout; 4x2 also shows the end date.
   - iOS: home screen (small/medium) and lock screen (circular/rectangular/inline). Long-press → *Edit Widget* → choose the cooldown.
 
 ## Project layout
