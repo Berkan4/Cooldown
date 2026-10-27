@@ -167,7 +167,12 @@ class CooldownWidgetProvider : AppWidgetProvider() {
             views.setTextViewText(R.id.title, title(layout, cooldown.emoji, cooldown.name))
             if (finished) {
                 views.setTextViewText(R.id.value, if (cooldown.repeats) "Ready" else "Done")
-                views.setTextViewText(R.id.label, if (cooldown.repeats) "tap to mark done" else "🎉")
+                val label = when {
+                    cooldown.finishText.isNotBlank() -> cooldown.finishText
+                    cooldown.repeats -> "tap to mark done"
+                    else -> "🎉"
+                }
+                views.setTextViewText(R.id.label, label)
             } else {
                 val (value, label) = CooldownFormat.remaining(now, end, format)
                 views.setTextViewText(R.id.value, value)

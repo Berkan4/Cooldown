@@ -22,6 +22,7 @@ struct CooldownData: Codable, Identifiable {
     let repeatUnit: String
     let waitForDone: Bool
     let display: String?
+    let finishText: String?
 
     var repeats: Bool { repeatValue > 0 }
     private var autoRepeats: Bool { repeats && !waitForDone }
@@ -205,7 +206,8 @@ struct Provider: AppIntentTimelineProvider {
             id: "sample", name: "Water plants", emoji: "🌱", color: 0xFF3A9D5D,
             targetMs: Date().addingTimeInterval(3 * 86400).timeIntervalSince1970 * 1000,
             startMs: Date().timeIntervalSince1970 * 1000,
-            repeatValue: 3, repeatUnit: "days", waitForDone: true, display: "days")
+            repeatValue: 3, repeatUnit: "days", waitForDone: true, display: "days",
+            finishText: "Water your plants!")
         return CooldownEntry(date: Date(), cooldown: sample, format: "days")
     }
 
@@ -266,7 +268,8 @@ struct CooldownWidgetView: View {
         let finished = cycle.end <= entry.date
         let r = CooldownFormat.remaining(now: entry.date, end: cycle.end, format: entry.format)
         let value = finished ? (c.repeats ? "Ready" : "Done") : r.value
-        let label = finished ? (c.repeats ? "tap to mark done" : "🎉") : r.label
+        let message = c.finishText ?? ""
+        let label = finished ? (!message.isEmpty ? message : c.repeats ? "tap to mark done" : "🎉") : r.label
         let total = max(1, cycle.end.timeIntervalSince(cycle.start))
         let progress = min(1, max(0, entry.date.timeIntervalSince(cycle.start) / total))
 

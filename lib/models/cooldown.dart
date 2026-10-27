@@ -49,6 +49,7 @@ class Cooldown {
     required this.waitForDone,
     required this.notify,
     this.display,
+    this.finishText = '',
   });
 
   final String id;
@@ -78,6 +79,9 @@ class Cooldown {
 
   /// null = use the app-wide default.
   DisplayFormat? display;
+
+  /// Optional message shown when it ends ("Water your plants!"). Empty = none.
+  String finishText;
 
   bool get repeats => repeatValue > 0;
   bool get autoRepeats => repeats && !waitForDone;
@@ -167,6 +171,7 @@ class Cooldown {
         'waitForDone': waitForDone,
         'notify': notify,
         'display': display?.key ?? 'default',
+        'finishText': finishText,
       };
 
   factory Cooldown.fromJson(Map<String, dynamic> j) => Cooldown(
@@ -184,6 +189,7 @@ class Cooldown {
         display: j['display'] == null || j['display'] == 'default'
             ? null
             : DisplayFormat.fromKey(j['display'] as String),
+        finishText: j['finishText'] as String? ?? '',
       );
 
   static String encodeList(List<Cooldown> list) => jsonEncode(list.map((c) => c.toJson()).toList());

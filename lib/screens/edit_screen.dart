@@ -35,6 +35,7 @@ class _EditScreenState extends State<EditScreen> {
   late final Cooldown _base;
   late final TextEditingController _name;
   late final TextEditingController _emoji;
+  late final TextEditingController _finishText;
   late final TextEditingController _durValue;
   late final TextEditingController _repValue;
   late final DateTime _originalDate;
@@ -58,6 +59,7 @@ class _EditScreenState extends State<EditScreen> {
     _base = widget.existing ?? widget.store.newDraft();
     _name = TextEditingController(text: _base.name);
     _emoji = TextEditingController(text: _base.emoji);
+    _finishText = TextEditingController(text: _base.finishText);
     _durValue = TextEditingController(text: '7');
     _repValue = TextEditingController(text: '${_base.repeats ? _base.repeatValue : 1}');
     _color = _base.color;
@@ -75,6 +77,7 @@ class _EditScreenState extends State<EditScreen> {
   void dispose() {
     _name.dispose();
     _emoji.dispose();
+    _finishText.dispose();
     _durValue.dispose();
     _repValue.dispose();
     super.dispose();
@@ -150,6 +153,7 @@ class _EditScreenState extends State<EditScreen> {
       waitForDone: _waitForDone,
       notify: _notify,
       display: _display,
+      finishText: _finishText.text.trim(),
     );
     await widget.store.upsert(saved);
     if (mounted) Navigator.of(context).pop();
@@ -302,6 +306,18 @@ class _EditScreenState extends State<EditScreen> {
               onChanged: (v) => setState(() => _waitForDone = v),
             ),
           const Divider(height: 32),
+          TextField(
+            controller: _finishText,
+            textCapitalization: TextCapitalization.sentences,
+            maxLength: 80,
+            decoration: const InputDecoration(
+              labelText: 'Message when it ends (optional)',
+              hintText: 'Water your plants!',
+              helperText: 'Shown in the reminder, on the card and on the widget',
+              border: OutlineInputBorder(),
+            ),
+          ),
+          const SizedBox(height: 8),
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
             title: const Text('Notify me when it ends'),

@@ -81,6 +81,12 @@ class NotificationService {
     }
   }
 
+  static String _defaultBody(Cooldown c) => !c.repeats
+      ? 'Your cooldown is over.'
+      : c.waitForDone
+          ? 'Ready! Open the app and tap Done to start the next round.'
+          : 'Ready! The next round has started automatically.';
+
   /// Simplest correct approach: wipe and rebuild the whole queue whenever
   /// anything changes or the app starts.
   Future<void> rescheduleAll(List<Cooldown> items) async {
@@ -103,11 +109,7 @@ class NotificationService {
     for (final job in jobs.take(_maxPending)) {
       final c = job.c;
       final title = '${c.emoji} ${c.name.isEmpty ? 'Cooldown' : c.name}';
-      final body = !c.repeats
-          ? 'Your cooldown is over.'
-          : c.waitForDone
-              ? 'Ready! Open the app and tap Done to start the next round.'
-              : 'Ready! The next round has started automatically.';
+      final body = c.finishText.isNotEmpty ? c.finishText : _defaultBody(c);
       try {
         await _plugin.zonedSchedule(
           job.id,

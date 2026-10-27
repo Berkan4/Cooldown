@@ -230,6 +230,11 @@ class _CooldownCard extends StatelessWidget {
                   ],
                 ),
               ),
+              if (finished && c.finishText.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4, right: 12),
+                  child: Text(c.finishText, style: theme.textTheme.titleSmall?.copyWith(color: accent)),
+                ),
               const SizedBox(height: 8),
               Padding(
                 padding: const EdgeInsets.only(right: 12),

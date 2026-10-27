@@ -82,5 +82,14 @@ void main() {
     expect(back.target, c.target);
     expect(back.repeatValue, 2);
     expect(back.display, isNull);
+    expect(back.finishText, '');
+  });
+
+  test('finish text survives json and defaults to empty for old data', () {
+    final c = _make(target: DateTime(2026, 11, 19), start: DateTime(2026, 10, 27))..finishText = 'Water your plants!';
+    expect(Cooldown.decodeList(Cooldown.encodeList([c])).single.finishText, 'Water your plants!');
+
+    final old = c.toJson()..remove('finishText');
+    expect(Cooldown.fromJson(old).finishText, '');
   });
 }

@@ -29,6 +29,7 @@ data class Cooldown(
     val repeatUnit: String,
     val waitForDone: Boolean,
     val display: String,
+    val finishText: String,
 ) {
     private val autoRepeats get() = repeatValue > 0 && !waitForDone
     val repeats get() = repeatValue > 0
@@ -90,6 +91,7 @@ data class Cooldown(
                         repeatUnit = o.optString("repeatUnit", "days"),
                         waitForDone = o.optBoolean("waitForDone", true),
                         display = o.optString("display", "default"),
+                        finishText = o.optString("finishText", ""),
                     )
                 }
             } catch (e: Exception) {
