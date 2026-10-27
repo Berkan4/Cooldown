@@ -7,7 +7,7 @@ Cooldowns and countdowns for Android and iPhone, with home-screen widgets and re
   - *Wait until I tap "Done"*: it stays at **Ready** until you mark it done, then the next round starts from that moment (watering plants), or
   - *automatic*: rolls straight into the next round (bin day, rent).
 - **Finish message (optional)**, e.g. "Water your plants!". It is shown in the reminder, on the card and on the widget when the cooldown ends.
-- **Notifications per cooldown**, on or off. Repeating cooldowns queue the next 5 reminders, so they keep coming even if you don't open the app.
+- **Reminder per cooldown:** off, silent, vibrate, sound, or sound + vibration. The ▶ button next to it shows a test reminder. On iPhone, vibration follows sound, so "Vibrate" arrives like "Silent". Repeating cooldowns queue the next 5 reminders, so they keep coming even if you don't open the app.
 - **Time format:** days by default. You can switch to weeks + days, hours, d/h/m or automatic, app-wide in Settings or per cooldown.
 - **Widgets are optional.** Each widget shows one cooldown you pick:
   - Android: a picker appears when you add the widget (long-press the widget → reconfigure to change it). You can also tap ⋮ → "Add to home screen" in the app.

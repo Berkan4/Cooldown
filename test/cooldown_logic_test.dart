@@ -83,6 +83,17 @@ void main() {
     expect(back.repeatValue, 2);
     expect(back.display, isNull);
     expect(back.finishText, '');
+    expect(back.alert, AlertMode.soundAndVibrate);
+  });
+
+  test('alert mode survives json and old data keeps sound + vibration', () {
+    final c = _make(target: DateTime(2026, 11, 19), start: DateTime(2026, 10, 27))..alert = AlertMode.vibrate;
+    expect(Cooldown.decodeList(Cooldown.encodeList([c])).single.alert, AlertMode.vibrate);
+
+    final old = c.toJson()..remove('alert');
+    expect(Cooldown.fromJson(old).alert, AlertMode.soundAndVibrate);
+    expect(AlertMode.vibrate.playsSound, isFalse);
+    expect(AlertMode.sound.vibrates, isFalse);
   });
 
   test('finish text survives json and defaults to empty for old data', () {

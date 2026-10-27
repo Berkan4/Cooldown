@@ -35,6 +35,24 @@ enum RepeatUnit {
       RepeatUnit.values.firstWhere((u) => u.key == key, orElse: () => RepeatUnit.days);
 }
 
+/// How the end-of-cooldown reminder gets your attention.
+enum AlertMode {
+  silent('silent', 'Silent'),
+  vibrate('vibrate', 'Vibrate'),
+  sound('sound', 'Sound'),
+  soundAndVibrate('soundVibrate', 'Sound + vibration');
+
+  const AlertMode(this.key, this.label);
+  final String key;
+  final String label;
+
+  bool get playsSound => this == sound || this == soundAndVibrate;
+  bool get vibrates => this == vibrate || this == soundAndVibrate;
+
+  static AlertMode fromKey(String? key) =>
+      AlertMode.values.firstWhere((m) => m.key == key, orElse: () => AlertMode.soundAndVibrate);
+}
+
 class Cooldown {
   Cooldown({
     required this.id,
@@ -50,6 +68,7 @@ class Cooldown {
     required this.notify,
     this.display,
     this.finishText = '',
+    this.alert = AlertMode.soundAndVibrate,
   });
 
   final String id;
@@ -76,6 +95,9 @@ class Cooldown {
   /// If false it rolls over to the next occurrence automatically.
   bool waitForDone;
   bool notify;
+
+  /// Only used when [notify] is on.
+  AlertMode alert;
 
   /// null = use the app-wide default.
   DisplayFormat? display;
@@ -172,6 +194,7 @@ class Cooldown {
         'notify': notify,
         'display': display?.key ?? 'default',
         'finishText': finishText,
+        'alert': alert.key,
       };
 
   factory Cooldown.fromJson(Map<String, dynamic> j) => Cooldown(
@@ -190,6 +213,7 @@ class Cooldown {
             ? null
             : DisplayFormat.fromKey(j['display'] as String),
         finishText: j['finishText'] as String? ?? '',
+        alert: AlertMode.fromKey(j['alert'] as String?),
       );
 
   static String encodeList(List<Cooldown> list) => jsonEncode(list.map((c) => c.toJson()).toList());

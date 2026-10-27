@@ -48,6 +48,7 @@ class _EditScreenState extends State<EditScreen> {
   late RepeatUnit _repUnit;
   late bool _waitForDone;
   late bool _notify;
+  late AlertMode _alert;
   DisplayFormat? _display;
 
   bool get _isNew => widget.existing == null;
@@ -70,6 +71,7 @@ class _EditScreenState extends State<EditScreen> {
     _repUnit = _base.repeatUnit;
     _waitForDone = _base.waitForDone;
     _notify = _base.notify;
+    _alert = _base.alert;
     _display = _base.display;
   }
 
@@ -154,6 +156,7 @@ class _EditScreenState extends State<EditScreen> {
       notify: _notify,
       display: _display,
       finishText: _finishText.text.trim(),
+      alert: _alert,
     );
     await widget.store.upsert(saved);
     if (mounted) Navigator.of(context).pop();
@@ -318,11 +321,35 @@ class _EditScreenState extends State<EditScreen> {
             ),
           ),
           const SizedBox(height: 8),
-          SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            title: const Text('Notify me when it ends'),
-            value: _notify,
-            onChanged: (v) => setState(() => _notify = v),
+          Row(
+            children: [
+              Expanded(
+                child: DropdownButtonFormField<AlertMode?>(
+                  initialValue: _notify ? _alert : null,
+                  isExpanded: true,
+                  decoration: const InputDecoration(labelText: 'Reminder when it ends', border: OutlineInputBorder()),
+                  items: [
+                    const DropdownMenuItem(value: null, child: Text('Off')),
+                    for (final m in AlertMode.values)
+                      DropdownMenuItem(value: m, child: Text(m.label)),
+                  ],
+                  onChanged: (m) => setState(() {
+                    _notify = m != null;
+                    if (m != null) _alert = m;
+                  }),
+                ),
+              ),
+              IconButton(
+                tooltip: 'Try it',
+                icon: const Icon(Icons.play_circle_outline),
+                onPressed: _notify
+                    ? () async {
+                        await widget.notifications.requestPermission();
+                        await widget.notifications.preview(_alert);
+                      }
+                    : null,
+              ),
+            ],
           ),
           const SizedBox(height: 8),
           DropdownButtonFormField<DisplayFormat?>(

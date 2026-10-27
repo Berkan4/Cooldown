@@ -1,4 +1,5 @@
 import 'dart:io' show Platform;
+import 'dart:ui' show Color;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -81,6 +82,38 @@ class NotificationService {
     }
   }
 
+  /// Android fixes sound and vibration per channel once it exists, so every
+  /// mode gets its own channel. "cooldown_end" is the original channel and
+  /// keeps meaning sound + vibration.
+  static NotificationDetails _details(AlertMode mode) {
+    final (channel, name) = switch (mode) {
+      AlertMode.silent => ('cooldown_silent', 'Cooldown finished (silent)'),
+      AlertMode.vibrate => ('cooldown_vibrate', 'Cooldown finished (vibrate)'),
+      AlertMode.sound => ('cooldown_sound', 'Cooldown finished (sound)'),
+      AlertMode.soundAndVibrate => ('cooldown_end', 'Cooldown finished'),
+    };
+    return NotificationDetails(
+      android: AndroidNotificationDetails(
+        channel,
+        name,
+        channelDescription: 'Shown when a cooldown ends',
+        importance: Importance.high,
+        priority: Priority.high,
+        playSound: mode.playsSound,
+        enableVibration: mode.vibrates,
+        color: const Color(0xFF4F7CAC),
+      ),
+      // iOS has no separate vibration switch: without sound it stays quiet.
+      iOS: DarwinNotificationDetails(presentSound: mode.playsSound),
+    );
+  }
+
+  /// Shows a sample reminder right away so the alert mode can be tried out.
+  Future<void> preview(AlertMode mode) async {
+    // IDs 0-9 are never used by a cooldown (seq starts at 1).
+    await _plugin.show(0, '⏳ Cooldown', 'This is how “${mode.label}” reminders arrive.', _details(mode));
+  }
+
   static String _defaultBody(Cooldown c) => !c.repeats
       ? 'Your cooldown is over.'
       : c.waitForDone
@@ -116,16 +149,7 @@ class NotificationService {
           title,
           body,
           tz.TZDateTime.from(job.at, tz.local),
-          const NotificationDetails(
-            android: AndroidNotificationDetails(
-              'cooldown_end',
-              'Cooldown finished',
-              channelDescription: 'Shown when a cooldown ends',
-              importance: Importance.high,
-              priority: Priority.high,
-            ),
-            iOS: DarwinNotificationDetails(),
-          ),
+          _details(c.alert),
           androidScheduleMode: mode,
           payload: c.id,
         );

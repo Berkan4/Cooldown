@@ -184,7 +184,7 @@ class _CooldownCard extends StatelessWidget {
                       children: [
                         Text(c.name, style: theme.textTheme.titleMedium, overflow: TextOverflow.ellipsis),
                         Text(
-                          '${describeRepeat(c)}${c.notify ? '' : ' · silent'}',
+                          '${describeRepeat(c)}${_alertSuffix(c)}',
                           style: theme.textTheme.bodySmall,
                         ),
                       ],
@@ -258,6 +258,12 @@ class _CooldownCard extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  static String _alertSuffix(Cooldown c) {
+    if (!c.notify) return ' · no reminder';
+    if (c.alert == AlertMode.soundAndVibrate) return '';
+    return ' · ${c.alert.label.toLowerCase()}';
   }
 
   static String _fmtDate(DateTime d) => DateFormat('EEE, d MMM yyyy · HH:mm').format(d);
