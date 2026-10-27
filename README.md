@@ -36,8 +36,10 @@ The widgets are native (Kotlin and Swift) and read the same JSON the app writes.
 
 Requirements: Flutter **3.35 or newer** and Android Studio (for the Android SDK).
 
+Open a terminal in the folder where you cloned this project (the one containing `pubspec.yaml`), then run:
+
 ```powershell
-cd D:\development\GIT\Cooldown
+cd <path-to-your-Cooldown-folder>                     # e.g. C:\Users\you\projects\Cooldown
 powershell -ExecutionPolicy Bypass -File .\setup.ps1   # flutter create + pub get + tests
 flutter run                                           # phone connected via USB
 ```
