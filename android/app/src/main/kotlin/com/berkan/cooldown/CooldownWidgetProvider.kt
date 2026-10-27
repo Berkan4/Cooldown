@@ -7,10 +7,57 @@ import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.graphics.Color
+import android.net.Uri
+import android.os.Build
+import android.os.Bundle
+import android.util.SizeF
 import android.view.View
 import android.widget.RemoteViews
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.util.Locale
+import kotlin.math.roundToInt
 
-class CooldownWidgetProvider : AppWidgetProvider() {
+/** How the title line is written in a layout. */
+private enum class TitleStyle { EMOJI_ONLY, STACKED, INLINE }
+
+/**
+ * One layout per widget size. A layout is used once the widget is at least
+ * [minWidthDp] x [minHeightDp]; of those that fit, the biggest one wins
+ * (the same rule Android 12+ applies to the size map in [CooldownWidgetProvider]).
+ */
+private class WidgetLayout(
+    val layoutId: Int,
+    val minWidthDp: Float,
+    val minHeightDp: Float,
+    val title: TitleStyle,
+    val showEnds: Boolean = false,
+) {
+    fun fits(widthDp: Float, heightDp: Float) = widthDp >= minWidthDp && heightDp >= minHeightDp
+    val area get() = minWidthDp * minHeightDp
+}
+
+// One cell is roughly 57-73dp wide and 50-102dp high, depending on launcher and orientation.
+private val LAYOUTS = listOf(
+    WidgetLayout(R.layout.cooldown_widget_tiny, 1f, 1f, TitleStyle.EMOJI_ONLY), // 1x1
+    WidgetLayout(R.layout.cooldown_widget_tall, 1f, 150f, TitleStyle.STACKED), // 1x2
+    WidgetLayout(R.layout.cooldown_widget_wide, 110f, 1f, TitleStyle.INLINE), // 2x1 .. 4x1
+    WidgetLayout(R.layout.cooldown_widget, 110f, 150f, TitleStyle.INLINE), // 2x2, 3x2
+    WidgetLayout(R.layout.cooldown_widget_large, 250f, 150f, TitleStyle.INLINE, showEnds = true), // 4x2+
+)
+
+private val DEFAULT_LAYOUT = LAYOUTS[3]
+
+private fun layoutFor(widthDp: Float, heightDp: Float): WidgetLayout =
+    LAYOUTS.filter { it.fits(widthDp, heightDp) }.maxByOrNull { it.area } ?: LAYOUTS.first()
+
+/** Same widget, other starting sizes in the widget picker (see res/xml/cooldown_widget_info_*.xml). */
+class CooldownWidgetTallProvider : CooldownWidgetProvider()
+class CooldownWidgetLargeProvider : CooldownWidgetProvider()
+
+open class CooldownWidgetProvider : AppWidgetProvider() {
 
     override fun onUpdate(context: Context, manager: AppWidgetManager, appWidgetIds: IntArray) {
         updateAll(context)
@@ -20,24 +67,40 @@ class CooldownWidgetProvider : AppWidgetProvider() {
         if (intent.action == ACTION_REFRESH) updateAll(context) else super.onReceive(context, intent)
     }
 
+    override fun onAppWidgetOptionsChanged(
+        context: Context,
+        manager: AppWidgetManager,
+        appWidgetId: Int,
+        newOptions: Bundle,
+    ) {
+        // Resized: before Android 12 we pick the layout ourselves, so redraw.
+        updateAll(context)
+    }
+
     override fun onDeleted(context: Context, appWidgetIds: IntArray) {
         val editor = prefs(context).edit()
-        appWidgetIds.forEach { editor.remove(widgetKey(it)) }
+        appWidgetIds.forEach { editor.remove(widgetKey(it)).remove(legacyWidgetOpacityKey(it)) }
         editor.apply()
     }
 
     override fun onDisabled(context: Context) {
+        // Called per picker entry; keep refreshing while any Cooldown widget is left.
+        if (allWidgetIds(context).isNotEmpty()) return
         val am = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         am.cancel(refreshIntent(context))
     }
 
     companion object {
         const val ACTION_REFRESH = "com.berkan.cooldown.REFRESH"
+        const val TEXT_DARK = 0xDD000000.toInt()
+        const val MUTED_DARK = 0xB3000000.toInt()
+        const val MUTED_LIGHT = 0xE6FFFFFF.toInt()
+        private const val HOME_WIDGET_LAUNCH_ACTION = "es.antonborri.home_widget.action.LAUNCH"
         private const val HALF_HOUR_MS = 1_800_000L
 
         fun updateAll(context: Context) {
             val manager = AppWidgetManager.getInstance(context)
-            val ids = manager.getAppWidgetIds(ComponentName(context, CooldownWidgetProvider::class.java))
+            val ids = allWidgetIds(context)
             val p = prefs(context)
 
             // A widget pinned from inside the app gets the cooldown the user picked there.
@@ -49,6 +112,7 @@ class CooldownWidgetProvider : AppWidgetProvider() {
                 }
             }
 
+            migrateWidgetOpacity(context, ids)
             val all = Cooldown.loadAll(context)
             val defaultFormat = p.getString("default_display", "days") ?: "days"
             val now = System.currentTimeMillis()
@@ -57,44 +121,124 @@ class CooldownWidgetProvider : AppWidgetProvider() {
             for (id in ids) {
                 val cooldownId = p.getString(widgetKey(id), null)
                 val cooldown = all.firstOrNull { it.id == cooldownId }
-                val views = RemoteViews(context.packageName, R.layout.cooldown_widget)
+                val format = cooldown?.let { if (it.display == "default") defaultFormat else it.display } ?: defaultFormat
+                val opacity = cooldown?.widgetOpacity ?: 1.0
+                fun build(layout: WidgetLayout) =
+                    buildViews(context, layout, id, cooldownId, cooldown, format, opacity, now)
 
-                if (cooldown == null) {
-                    views.setTextViewText(R.id.title, "⏳ Cooldown")
-                    views.setTextViewText(R.id.value, if (cooldownId == null) "Tap" else "?")
-                    views.setTextViewText(R.id.label, if (cooldownId == null) "to choose a cooldown" else "not found — tap to choose")
-                    views.setViewVisibility(R.id.progress, View.GONE)
-                    views.setInt(R.id.bg, "setColorFilter", 0xFF6B6B6B.toInt())
-                    views.setOnClickPendingIntent(R.id.root, configIntent(context, id))
+                val views = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    // The launcher switches between these by itself while resizing.
+                    RemoteViews(LAYOUTS.associate { SizeF(it.minWidthDp, it.minHeightDp) to build(it) })
                 } else {
-                    val (start, end) = cooldown.currentCycle(now)
-                    val format = if (cooldown.display == "default") defaultFormat else cooldown.display
-                    val finished = end <= now
-                    views.setTextViewText(R.id.title, "${cooldown.emoji} ${cooldown.name}")
-                    if (finished) {
-                        views.setTextViewText(R.id.value, if (cooldown.repeats) "Ready" else "Done")
-                        views.setTextViewText(R.id.label, if (cooldown.repeats) "tap to mark done" else "🎉")
-                    } else {
-                        val (value, label) = CooldownFormat.remaining(now, end, format)
-                        views.setTextViewText(R.id.value, value)
-                        views.setTextViewText(R.id.label, label)
+                    build(currentLayout(manager, id))
+                }
+                manager.updateAppWidget(id, views)
+
+                if (cooldown != null) {
+                    val end = cooldown.currentCycle(now).second
+                    if (end > now) {
                         nextRefresh = minOf(nextRefresh, end + 1000)
                         if (CooldownFormat.isFineGrained(now, end, format)) {
                             nextRefresh = minOf(nextRefresh, now + 60_000)
                         }
                     }
-                    val total = (end - start).coerceAtLeast(1)
-                    val pct = (((now - start).toDouble() / total) * 100).toInt().coerceIn(0, 100)
-                    views.setViewVisibility(R.id.progress, View.VISIBLE)
-                    views.setProgressBar(R.id.progress, 100, pct, false)
-                    views.setInt(R.id.bg, "setColorFilter", cooldown.color)
-                    views.setOnClickPendingIntent(R.id.root, openAppIntent(context))
                 }
-                manager.updateAppWidget(id, views)
             }
 
             if (ids.isNotEmpty()) scheduleRefresh(context, nextRefresh)
         }
+
+        private val PROVIDERS = listOf(
+            CooldownWidgetProvider::class.java,
+            CooldownWidgetTallProvider::class.java,
+            CooldownWidgetLargeProvider::class.java,
+        )
+
+        fun allWidgetIds(context: Context): IntArray {
+            val manager = AppWidgetManager.getInstance(context)
+            return PROVIDERS.flatMap { manager.getAppWidgetIds(ComponentName(context, it)).asList() }.toIntArray()
+        }
+
+        /** Before Android 12: portrait size is min width x max height. */
+        private fun currentLayout(manager: AppWidgetManager, appWidgetId: Int): WidgetLayout {
+            val options = manager.getAppWidgetOptions(appWidgetId)
+            val w = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 0)
+            val h = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 0)
+            return if (w == 0 || h == 0) DEFAULT_LAYOUT else layoutFor(w.toFloat(), h.toFloat())
+        }
+
+        private fun buildViews(
+            context: Context,
+            layout: WidgetLayout,
+            appWidgetId: Int,
+            cooldownId: String?,
+            cooldown: Cooldown?,
+            format: String,
+            opacity: Double,
+            now: Long,
+        ): RemoteViews {
+            val views = RemoteViews(context.packageName, layout.layoutId)
+
+            // Dark text on very light colours (same rule as foregroundOn() in Dart),
+            // unless the background is mostly see-through.
+            val darkText = cooldown != null && opacity >= 0.5 &&
+                Color.luminance(cooldown.color) > 0.6f
+            val text = if (darkText) TEXT_DARK else Color.WHITE
+            val muted = if (darkText) MUTED_DARK else MUTED_LIGHT
+            views.setTextColor(R.id.title, text)
+            views.setTextColor(R.id.value, text)
+            views.setTextColor(R.id.label, muted)
+            if (layout.showEnds) views.setTextColor(R.id.ends, muted)
+
+            if (cooldown == null) {
+                views.setTextViewText(R.id.title, title(layout, "⏳", "Cooldown"))
+                views.setTextViewText(R.id.value, if (cooldownId == null) "Tap" else "?")
+                views.setTextViewText(R.id.label, if (cooldownId == null) "to choose a cooldown" else "not found — tap to choose")
+                views.setViewVisibility(R.id.progress, View.GONE)
+                if (layout.showEnds) views.setTextViewText(R.id.ends, "")
+                views.setInt(R.id.bg, "setColorFilter", 0xFF6B6B6B.toInt())
+                views.setInt(R.id.bg, "setImageAlpha", 255)
+                views.setOnClickPendingIntent(R.id.root, configIntent(context, appWidgetId))
+                return views
+            }
+
+            val (start, end) = cooldown.currentCycle(now)
+            val finished = end <= now
+            views.setTextViewText(R.id.title, title(layout, cooldown.emoji, cooldown.name))
+            if (finished) {
+                views.setTextViewText(R.id.value, if (cooldown.repeats) "Ready" else "Done")
+                val label = when {
+                    cooldown.finishText.isNotBlank() -> cooldown.finishText
+                    cooldown.repeats -> "tap to mark done"
+                    else -> "🎉"
+                }
+                views.setTextViewText(R.id.label, label)
+            } else {
+                val (value, label) = CooldownFormat.remaining(now, end, format)
+                views.setTextViewText(R.id.value, value)
+                views.setTextViewText(R.id.label, label)
+            }
+            if (layout.showEnds) {
+                val date = Instant.ofEpochMilli(end).atZone(ZoneId.systemDefault()).format(ENDS_FORMAT)
+                views.setTextViewText(R.id.ends, if (finished) "Ended $date" else "Ends $date")
+            }
+            val total = (end - start).coerceAtLeast(1)
+            val pct = (((now - start).toDouble() / total) * 100).toInt().coerceIn(0, 100)
+            views.setViewVisibility(R.id.progress, View.VISIBLE)
+            views.setProgressBar(R.id.progress, 100, pct, false)
+            views.setInt(R.id.bg, "setColorFilter", cooldown.color)
+            views.setInt(R.id.bg, "setImageAlpha", (opacity * 255).roundToInt())
+            views.setOnClickPendingIntent(R.id.root, openCooldownIntent(context, appWidgetId, cooldown.id))
+            return views
+        }
+
+        private fun title(layout: WidgetLayout, emoji: String, name: String) = when (layout.title) {
+            TitleStyle.EMOJI_ONLY -> emoji
+            TitleStyle.STACKED -> "$emoji\n$name"
+            TitleStyle.INLINE -> "$emoji $name"
+        }
+
+        private val ENDS_FORMAT = DateTimeFormatter.ofPattern("EEE, d MMM · HH:mm", Locale.getDefault())
 
         /** Inexact alarm (no special permission needed) to keep the widget current. */
         private fun scheduleRefresh(context: Context, atMs: Long) {
@@ -112,12 +256,19 @@ class CooldownWidgetProvider : AppWidgetProvider() {
             )
         }
 
-        private fun openAppIntent(context: Context): PendingIntent {
+        /**
+         * Opens the app on this cooldown. Uses home_widget's launch action, which
+         * hands the link to Dart (HomeWidget.initiallyLaunchedFromHomeWidget /
+         * widgetClicked); see HomeScreen._openFromWidget.
+         */
+        private fun openCooldownIntent(context: Context, appWidgetId: Int, cooldownId: String): PendingIntent {
             val intent = Intent(context, MainActivity::class.java).apply {
+                action = HOME_WIDGET_LAUNCH_ACTION
+                data = Uri.parse("cooldown://open?id=${Uri.encode(cooldownId)}&homeWidget")
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
             }
             return PendingIntent.getActivity(
-                context, 1, intent,
+                context, 2000 + appWidgetId, intent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
             )
         }

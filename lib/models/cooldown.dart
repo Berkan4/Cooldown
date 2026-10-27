@@ -35,6 +35,24 @@ enum RepeatUnit {
       RepeatUnit.values.firstWhere((u) => u.key == key, orElse: () => RepeatUnit.days);
 }
 
+/// How the end-of-cooldown reminder gets your attention.
+enum AlertMode {
+  silent('silent', 'Silent'),
+  vibrate('vibrate', 'Vibrate'),
+  sound('sound', 'Sound'),
+  soundAndVibrate('soundVibrate', 'Sound + vibration');
+
+  const AlertMode(this.key, this.label);
+  final String key;
+  final String label;
+
+  bool get playsSound => this == sound || this == soundAndVibrate;
+  bool get vibrates => this == vibrate || this == soundAndVibrate;
+
+  static AlertMode fromKey(String? key) =>
+      AlertMode.values.firstWhere((m) => m.key == key, orElse: () => AlertMode.soundAndVibrate);
+}
+
 class Cooldown {
   Cooldown({
     required this.id,
@@ -49,6 +67,9 @@ class Cooldown {
     required this.waitForDone,
     required this.notify,
     this.display,
+    this.finishText = '',
+    this.alert = AlertMode.soundAndVibrate,
+    this.widgetOpacity = 1.0,
   });
 
   final String id;
@@ -76,8 +97,17 @@ class Cooldown {
   bool waitForDone;
   bool notify;
 
+  /// Only used when [notify] is on.
+  AlertMode alert;
+
+  /// Opacity of the widget background in its colour: 0 = fully transparent, 1 = solid.
+  double widgetOpacity;
+
   /// null = use the app-wide default.
   DisplayFormat? display;
+
+  /// Optional message shown when it ends ("Water your plants!"). Empty = none.
+  String finishText;
 
   bool get repeats => repeatValue > 0;
   bool get autoRepeats => repeats && !waitForDone;
@@ -167,6 +197,9 @@ class Cooldown {
         'waitForDone': waitForDone,
         'notify': notify,
         'display': display?.key ?? 'default',
+        'finishText': finishText,
+        'alert': alert.key,
+        'widgetOpacity': widgetOpacity,
       };
 
   factory Cooldown.fromJson(Map<String, dynamic> j) => Cooldown(
@@ -184,6 +217,9 @@ class Cooldown {
         display: j['display'] == null || j['display'] == 'default'
             ? null
             : DisplayFormat.fromKey(j['display'] as String),
+        finishText: j['finishText'] as String? ?? '',
+        alert: AlertMode.fromKey(j['alert'] as String?),
+        widgetOpacity: ((j['widgetOpacity'] as num?)?.toDouble() ?? 1.0).clamp(0.0, 1.0),
       );
 
   static String encodeList(List<Cooldown> list) => jsonEncode(list.map((c) => c.toJson()).toList());

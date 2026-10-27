@@ -22,11 +22,23 @@ struct CooldownData: Codable, Identifiable {
     let repeatUnit: String
     let waitForDone: Bool
     let display: String?
+    let finishText: String?
+    let widgetOpacity: Double?
 
     var repeats: Bool { repeatValue > 0 }
     private var autoRepeats: Bool { repeats && !waitForDone }
     private var anchor: Date { Date(timeIntervalSince1970: targetMs / 1000) }
     private var startDate: Date { Date(timeIntervalSince1970: startMs / 1000) }
+
+    /// Dark text on very light colours (same rule as foregroundOn() in Dart).
+    var prefersDarkText: Bool {
+        func lin(_ v: Int64) -> Double {
+            let c = Double(v & 0xFF) / 255
+            return c <= 0.04045 ? c / 12.92 : pow((c + 0.055) / 1.055, 2.4)
+        }
+        let l = 0.2126 * lin(color >> 16) + 0.7152 * lin(color >> 8) + 0.0722 * lin(color)
+        return l > 0.6 && (widgetOpacity ?? 1) >= 0.5
+    }
 
     var swiftColor: Color {
         Color(
@@ -205,7 +217,8 @@ struct Provider: AppIntentTimelineProvider {
             id: "sample", name: "Water plants", emoji: "🌱", color: 0xFF3A9D5D,
             targetMs: Date().addingTimeInterval(3 * 86400).timeIntervalSince1970 * 1000,
             startMs: Date().timeIntervalSince1970 * 1000,
-            repeatValue: 3, repeatUnit: "days", waitForDone: true, display: "days")
+            repeatValue: 3, repeatUnit: "days", waitForDone: true, display: "days",
+            finishText: "Water your plants!", widgetOpacity: 1)
         return CooldownEntry(date: Date(), cooldown: sample, format: "days")
     }
 
@@ -266,9 +279,11 @@ struct CooldownWidgetView: View {
         let finished = cycle.end <= entry.date
         let r = CooldownFormat.remaining(now: entry.date, end: cycle.end, format: entry.format)
         let value = finished ? (c.repeats ? "Ready" : "Done") : r.value
-        let label = finished ? (c.repeats ? "tap to mark done" : "🎉") : r.label
+        let message = c.finishText ?? ""
+        let label = finished ? (!message.isEmpty ? message : c.repeats ? "tap to mark done" : "🎉") : r.label
         let total = max(1, cycle.end.timeIntervalSince(cycle.start))
         let progress = min(1, max(0, entry.date.timeIntervalSince(cycle.start) / total))
+        let opacity = min(1, max(0, c.widgetOpacity ?? 1))
 
         switch family {
         case .accessoryInline:
@@ -304,9 +319,11 @@ struct CooldownWidgetView: View {
                     .tint(.white)
                     .padding(.top, 4)
             }
-            .foregroundStyle(.white)
+            .foregroundStyle(c.prefersDarkText ? Color.black.opacity(0.87) : .white)
+            .shadow(color: .black.opacity(opacity < 1 ? 0.4 : 0), radius: 2, y: 1)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-            .containerBackground(for: .widget) { c.swiftColor }
+            .containerBackground(for: .widget) { c.swiftColor.opacity(opacity) }
+            .widgetURL(URL(string: "cooldown://open?id=\(c.id)&homeWidget"))
         }
     }
 }

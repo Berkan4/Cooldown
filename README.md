@@ -6,10 +6,14 @@ Cooldowns and countdowns for Android and iPhone, with home-screen widgets and re
 - **Repeat:** every N hours/days/weeks/months/years, either
   - *Wait until I tap "Done"*: it stays at **Ready** until you mark it done, then the next round starts from that moment (watering plants), or
   - *automatic*: rolls straight into the next round (bin day, rent).
-- **Notifications per cooldown**, on or off. Repeating cooldowns queue the next 5 reminders, so they keep coming even if you don't open the app.
+- **Finish message (optional)**, e.g. "Water your plants!". It is shown in the reminder, on the card and on the widget when the cooldown ends.
+- **Reminder per cooldown:** off, silent, vibrate, sound, or sound + vibration. The ▶ button next to it shows a test reminder. On iPhone, vibration follows sound, so "Vibrate" arrives like "Silent". Repeating cooldowns queue the next 5 reminders, so they keep coming even if you don't open the app.
+- **Two list styles:** big coloured cards, or a compact list to see more at a glance (toggle in the top bar).
 - **Time format:** days by default. You can switch to weeks + days, hours, d/h/m or automatic, app-wide in Settings or per cooldown.
-- **Widgets are optional.** Each widget shows one cooldown you pick:
+- **Widgets are optional.** Each widget shows one cooldown you pick. Its background uses the cooldown's colour, and a slider in the editor sets how see-through it is, from solid to fully transparent. On Android the same setting is also in the widget's settings (long-press it → settings); both always show the same value. The cooldown itself is chosen when the widget is added:
   - Android: a picker appears when you add the widget (long-press the widget → reconfigure to change it). You can also tap ⋮ → "Add to home screen" in the app.
+    Tapping a widget opens that cooldown in the app (with a Done button when it is ready).
+    The widget picker offers three starting sizes: **Cooldown 1x1**, **Cooldown 1x2** and **Cooldown 4x2**. "Add to home screen" in the app uses 1x1. Each one can be resized from 1x1 up to 4x2 and bigger. 1x1, 1x2, 2x1 (up to 4x1), 2x2 and 4x2 each get their own layout; 4x2 also shows the end date.
   - iOS: home screen (small/medium) and lock screen (circular/rectangular/inline). Long-press → *Edit Widget* → choose the cooldown.
 
 ## Project layout
@@ -32,8 +36,10 @@ The widgets are native (Kotlin and Swift) and read the same JSON the app writes.
 
 Requirements: Flutter **3.35 or newer** and Android Studio (for the Android SDK).
 
+Open a terminal in the folder where you cloned this project (the one containing `pubspec.yaml`), then run:
+
 ```powershell
-cd D:\development\GIT\Cooldown
+cd <path-to-your-Cooldown-folder>                     # e.g. C:\Users\you\projects\Cooldown
 powershell -ExecutionPolicy Bypass -File .\setup.ps1   # flutter create + pub get + tests
 flutter run                                           # phone connected via USB
 ```

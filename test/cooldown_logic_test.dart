@@ -82,5 +82,33 @@ void main() {
     expect(back.target, c.target);
     expect(back.repeatValue, 2);
     expect(back.display, isNull);
+    expect(back.finishText, '');
+    expect(back.alert, AlertMode.soundAndVibrate);
+    expect(back.widgetOpacity, 1.0);
+  });
+
+  test('widget opacity survives json and is clamped', () {
+    final c = _make(target: DateTime(2026, 11, 19), start: DateTime(2026, 10, 27))..widgetOpacity = 0.35;
+    expect(Cooldown.decodeList(Cooldown.encodeList([c])).single.widgetOpacity, 0.35);
+    expect(Cooldown.fromJson(c.toJson()..['widgetOpacity'] = 3).widgetOpacity, 1.0);
+    expect(Cooldown.fromJson(c.toJson()..['widgetOpacity'] = 0).widgetOpacity, 0.0);
+  });
+
+  test('alert mode survives json and old data keeps sound + vibration', () {
+    final c = _make(target: DateTime(2026, 11, 19), start: DateTime(2026, 10, 27))..alert = AlertMode.vibrate;
+    expect(Cooldown.decodeList(Cooldown.encodeList([c])).single.alert, AlertMode.vibrate);
+
+    final old = c.toJson()..remove('alert');
+    expect(Cooldown.fromJson(old).alert, AlertMode.soundAndVibrate);
+    expect(AlertMode.vibrate.playsSound, isFalse);
+    expect(AlertMode.sound.vibrates, isFalse);
+  });
+
+  test('finish text survives json and defaults to empty for old data', () {
+    final c = _make(target: DateTime(2026, 11, 19), start: DateTime(2026, 10, 27))..finishText = 'Water your plants!';
+    expect(Cooldown.decodeList(Cooldown.encodeList([c])).single.finishText, 'Water your plants!');
+
+    final old = c.toJson()..remove('finishText');
+    expect(Cooldown.fromJson(old).finishText, '');
   });
 }

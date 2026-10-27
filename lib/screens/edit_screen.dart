@@ -1,9 +1,12 @@
+import 'dart:io' show Platform;
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../models/cooldown.dart';
 import '../services/notifications.dart';
 import '../services/store.dart';
+import 'color_picker.dart';
 
 const _palette = <int>[
   0xFF4F7CAC, // blue
@@ -35,11 +38,17 @@ class _EditScreenState extends State<EditScreen> {
   late final Cooldown _base;
   late final TextEditingController _name;
   late final TextEditingController _emoji;
+  late final TextEditingController _finishText;
   late final TextEditingController _durValue;
   late final TextEditingController _repValue;
   late final DateTime _originalDate;
 
   late int _color;
+  late double _widgetOpacity;
+
+  /// Until the slider is moved here, follow changes made from the widget's
+  /// settings (the store reloads when the app comes back to the front).
+  bool _opacityTouched = false;
   late _Mode _mode;
   RepeatUnit _durUnit = RepeatUnit.days;
   late DateTime _date;
@@ -47,6 +56,7 @@ class _EditScreenState extends State<EditScreen> {
   late RepeatUnit _repUnit;
   late bool _waitForDone;
   late bool _notify;
+  late AlertMode _alert;
   DisplayFormat? _display;
 
   bool get _isNew => widget.existing == null;
@@ -58,9 +68,12 @@ class _EditScreenState extends State<EditScreen> {
     _base = widget.existing ?? widget.store.newDraft();
     _name = TextEditingController(text: _base.name);
     _emoji = TextEditingController(text: _base.emoji);
+    _finishText = TextEditingController(text: _base.finishText);
     _durValue = TextEditingController(text: '7');
     _repValue = TextEditingController(text: '${_base.repeats ? _base.repeatValue : 1}');
     _color = _base.color;
+    _widgetOpacity = _base.widgetOpacity;
+    widget.store.addListener(_syncOpacity);
     _mode = _isNew ? _Mode.duration : _Mode.date;
     _date = _base.currentEnd(now);
     _originalDate = _date;
@@ -68,17 +81,45 @@ class _EditScreenState extends State<EditScreen> {
     _repUnit = _base.repeatUnit;
     _waitForDone = _base.waitForDone;
     _notify = _base.notify;
+    _alert = _base.alert;
     _display = _base.display;
+  }
+
+  void _syncOpacity() {
+    final latest = widget.store.byId(_base.id);
+    if (_opacityTouched || latest == null || latest.widgetOpacity == _widgetOpacity) return;
+    setState(() => _widgetOpacity = latest.widgetOpacity);
   }
 
   @override
   void dispose() {
+    widget.store.removeListener(_syncOpacity);
     _name.dispose();
     _emoji.dispose();
+    _finishText.dispose();
     _durValue.dispose();
     _repValue.dispose();
     super.dispose();
   }
+
+  /// Where the duration typed in "Ends in" would end, or null if it isn't valid.
+  DateTime? _durationEnd() {
+    final n = int.tryParse(_durValue.text.trim());
+    if (n == null || n <= 0) return null;
+    return addInterval(DateTime.now(), _durUnit, n);
+  }
+
+  void _switchMode(_Mode mode) => setState(() {
+        final end = _durationEnd();
+        if (_mode == _Mode.duration && mode == _Mode.date && end != null) {
+          // Carry the duration over: show the date & time it would have ended,
+          // and repeat on the same interval.
+          _date = end;
+          _repValue.text = _durValue.text.trim();
+          _repUnit = _durUnit;
+        }
+        _mode = mode;
+      });
 
   Future<void> _pickDate() async {
     final now = DateTime.now();
@@ -150,6 +191,9 @@ class _EditScreenState extends State<EditScreen> {
       waitForDone: _waitForDone,
       notify: _notify,
       display: _display,
+      finishText: _finishText.text.trim(),
+      alert: _alert,
+      widgetOpacity: _widgetOpacity,
     );
     await widget.store.upsert(saved);
     if (mounted) Navigator.of(context).pop();
@@ -208,7 +252,8 @@ class _EditScreenState extends State<EditScreen> {
           ),
           const SizedBox(height: 8),
           Wrap(
-            spacing: 10,
+            spacing: 8,
+            runSpacing: 8,
             children: [
               for (final col in _palette)
                 GestureDetector(
@@ -219,6 +264,43 @@ class _EditScreenState extends State<EditScreen> {
                     child: _color == col ? const Icon(Icons.check, size: 18, color: Colors.white) : null,
                   ),
                 ),
+              CustomColorButton(
+                selected: _palette.contains(_color) ? null : Color(_color),
+                onTap: () async {
+                  final picked = await showCustomColorPicker(context, _color);
+                  if (picked != null) setState(() => _color = picked);
+                },
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              _WidgetPreview(color: Color(_color), opacity: _widgetOpacity, emoji: _emoji.text),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Widget background: ${(_widgetOpacity * 100).round()}%', style: theme.textTheme.bodyMedium),
+                    Slider(
+                      value: _widgetOpacity,
+                      divisions: 20,
+                      label: '${(_widgetOpacity * 100).round()}%',
+                      onChanged: (v) => setState(() {
+                        _widgetOpacity = v;
+                        _opacityTouched = true;
+                      }),
+                    ),
+                    if (Platform.isAndroid)
+                      Text(
+                        'Same setting as in the widget’s own settings '
+                        '(long-press the widget on the home screen).',
+                        style: theme.textTheme.bodySmall,
+                      ),
+                  ],
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 24),
@@ -228,10 +310,10 @@ class _EditScreenState extends State<EditScreen> {
               ButtonSegment(value: _Mode.date, label: Text('Date & time'), icon: Icon(Icons.event)),
             ],
             selected: {_mode},
-            onSelectionChanged: (s) => setState(() => _mode = s.first),
+            onSelectionChanged: (s) => _switchMode(s.first),
           ),
           const SizedBox(height: 16),
-          if (_mode == _Mode.duration)
+          if (_mode == _Mode.duration) ...[
             Row(
               children: [
                 SizedBox(
@@ -240,13 +322,22 @@ class _EditScreenState extends State<EditScreen> {
                     controller: _durValue,
                     keyboardType: TextInputType.number,
                     decoration: const InputDecoration(labelText: 'Ends in', border: OutlineInputBorder()),
+                    onChanged: (_) => setState(() {}),
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(child: _unitDropdown(_durUnit, (u) => setState(() => _durUnit = u))),
               ],
-            )
-          else
+            ),
+            if (_durationEnd() case final end?)
+              Padding(
+                padding: const EdgeInsets.only(top: 8, left: 4),
+                child: Text(
+                  'Ends ${DateFormat('EEE, d MMM yyyy · HH:mm').format(end)}',
+                  style: theme.textTheme.bodySmall,
+                ),
+              ),
+          ] else
             Row(
               children: [
                 Expanded(
@@ -302,15 +393,52 @@ class _EditScreenState extends State<EditScreen> {
               onChanged: (v) => setState(() => _waitForDone = v),
             ),
           const Divider(height: 32),
-          SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            title: const Text('Notify me when it ends'),
-            value: _notify,
-            onChanged: (v) => setState(() => _notify = v),
+          TextField(
+            controller: _finishText,
+            textCapitalization: TextCapitalization.sentences,
+            maxLength: 80,
+            decoration: const InputDecoration(
+              labelText: 'Message when it ends (optional)',
+              hintText: 'Water your plants!',
+              helperText: 'Shown in the reminder, on the card and on the widget',
+              border: OutlineInputBorder(),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: DropdownButtonFormField<AlertMode?>(
+                  initialValue: _notify ? _alert : null,
+                  isExpanded: true,
+                  decoration: const InputDecoration(labelText: 'Reminder when it ends', border: OutlineInputBorder()),
+                  items: [
+                    const DropdownMenuItem(value: null, child: Text('Off')),
+                    for (final m in AlertMode.values)
+                      DropdownMenuItem(value: m, child: Text(m.label)),
+                  ],
+                  onChanged: (m) => setState(() {
+                    _notify = m != null;
+                    if (m != null) _alert = m;
+                  }),
+                ),
+              ),
+              IconButton(
+                tooltip: 'Try it',
+                icon: const Icon(Icons.play_circle_outline),
+                onPressed: _notify
+                    ? () async {
+                        await widget.notifications.requestPermission();
+                        await widget.notifications.preview(_alert);
+                      }
+                    : null,
+              ),
+            ],
           ),
           const SizedBox(height: 8),
           DropdownButtonFormField<DisplayFormat?>(
             initialValue: _display,
+            isExpanded: true,
             decoration: const InputDecoration(labelText: 'Show remaining time as', border: OutlineInputBorder()),
             items: [
               DropdownMenuItem(value: null, child: Text('Default ($defaultLabel)')),
@@ -332,11 +460,43 @@ class _EditScreenState extends State<EditScreen> {
   Widget _unitDropdown(RepeatUnit value, ValueChanged<RepeatUnit> onChanged) {
     return DropdownButtonFormField<RepeatUnit>(
       initialValue: value,
+      isExpanded: true,
       decoration: const InputDecoration(border: OutlineInputBorder(), isDense: true),
       items: [for (final u in RepeatUnit.values) DropdownMenuItem(value: u, child: Text(u.plural))],
       onChanged: (u) {
         if (u != null) onChanged(u);
       },
+    );
+  }
+}
+
+/// The widget's background over a sample "wallpaper", to show the chosen transparency.
+class _WidgetPreview extends StatelessWidget {
+  const _WidgetPreview({required this.color, required this.opacity, required this.emoji});
+
+  final Color color;
+  final double opacity;
+  final String emoji;
+
+  @override
+  Widget build(BuildContext context) {
+    final radius = BorderRadius.circular(12);
+    return Container(
+      width: 56,
+      height: 56,
+      decoration: BoxDecoration(
+        borderRadius: radius,
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF8A9A5B), Color(0xFF35506B)],
+        ),
+      ),
+      child: Container(
+        decoration: BoxDecoration(borderRadius: radius, color: color.withValues(alpha: opacity)),
+        alignment: Alignment.center,
+        child: Text(emoji.trim().isEmpty ? '⏳' : emoji.trim(), style: const TextStyle(fontSize: 24)),
+      ),
     );
   }
 }
