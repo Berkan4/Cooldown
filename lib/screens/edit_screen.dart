@@ -438,6 +438,7 @@ class _EditScreenState extends State<EditScreen> {
           const SizedBox(height: 8),
           DropdownButtonFormField<DisplayFormat?>(
             initialValue: _display,
+            isExpanded: true,
             decoration: const InputDecoration(labelText: 'Show remaining time as', border: OutlineInputBorder()),
             items: [
               DropdownMenuItem(value: null, child: Text('Default ($defaultLabel)')),
@@ -459,6 +460,7 @@ class _EditScreenState extends State<EditScreen> {
   Widget _unitDropdown(RepeatUnit value, ValueChanged<RepeatUnit> onChanged) {
     return DropdownButtonFormField<RepeatUnit>(
       initialValue: value,
+      isExpanded: true,
       decoration: const InputDecoration(border: OutlineInputBorder(), isDense: true),
       items: [for (final u in RepeatUnit.values) DropdownMenuItem(value: u, child: Text(u.plural))],
       onChanged: (u) {
