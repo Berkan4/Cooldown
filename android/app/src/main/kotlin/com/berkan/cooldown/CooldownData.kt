@@ -30,6 +30,7 @@ data class Cooldown(
     val waitForDone: Boolean,
     val display: String,
     val finishText: String,
+    val widgetOpacity: Double,
 ) {
     private val autoRepeats get() = repeatValue > 0 && !waitForDone
     val repeats get() = repeatValue > 0
@@ -92,6 +93,7 @@ data class Cooldown(
                         waitForDone = o.optBoolean("waitForDone", true),
                         display = o.optString("display", "default"),
                         finishText = o.optString("finishText", ""),
+                        widgetOpacity = o.optDouble("widgetOpacity", 1.0).coerceIn(0.0, 1.0),
                     )
                 }
             } catch (e: Exception) {

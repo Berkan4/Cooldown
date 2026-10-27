@@ -40,6 +40,9 @@
                 android:maxLines="1"
                 android:minWidth="40dp"
                 android:textColor="#FFFFFF"
+                android:shadowColor="#66000000"
+                android:shadowDy="1"
+                android:shadowRadius="3"
                 android:textSize="24sp"
                 android:textStyle="bold" />
 
@@ -57,6 +60,9 @@
                     android:ellipsize="end"
                     android:maxLines="1"
                     android:textColor="#FFFFFF"
+                    android:shadowColor="#66000000"
+                    android:shadowDy="1"
+                    android:shadowRadius="3"
                     android:textSize="13sp"
                     android:textStyle="bold" />
 
@@ -67,6 +73,9 @@
                     android:ellipsize="end"
                     android:maxLines="1"
                     android:textColor="#E6FFFFFF"
+                    android:shadowColor="#66000000"
+                    android:shadowDy="1"
+                    android:shadowRadius="3"
                     android:textSize="12sp" />
             </LinearLayout>
         </LinearLayout>

@@ -41,6 +41,7 @@ class _EditScreenState extends State<EditScreen> {
   late final DateTime _originalDate;
 
   late int _color;
+  late double _widgetOpacity;
   late _Mode _mode;
   RepeatUnit _durUnit = RepeatUnit.days;
   late DateTime _date;
@@ -64,6 +65,7 @@ class _EditScreenState extends State<EditScreen> {
     _durValue = TextEditingController(text: '7');
     _repValue = TextEditingController(text: '${_base.repeats ? _base.repeatValue : 1}');
     _color = _base.color;
+    _widgetOpacity = _base.widgetOpacity;
     _mode = _isNew ? _Mode.duration : _Mode.date;
     _date = _base.currentEnd(now);
     _originalDate = _date;
@@ -157,6 +159,7 @@ class _EditScreenState extends State<EditScreen> {
       display: _display,
       finishText: _finishText.text.trim(),
       alert: _alert,
+      widgetOpacity: _widgetOpacity,
     );
     await widget.store.upsert(saved);
     if (mounted) Navigator.of(context).pop();
@@ -226,6 +229,27 @@ class _EditScreenState extends State<EditScreen> {
                     child: _color == col ? const Icon(Icons.check, size: 18, color: Colors.white) : null,
                   ),
                 ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              _WidgetPreview(color: Color(_color), opacity: _widgetOpacity, emoji: _emoji.text),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Widget background: ${(_widgetOpacity * 100).round()}%', style: theme.textTheme.bodyMedium),
+                    Slider(
+                      value: _widgetOpacity,
+                      divisions: 20,
+                      label: '${(_widgetOpacity * 100).round()}%',
+                      onChanged: (v) => setState(() => _widgetOpacity = v),
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 24),
@@ -380,6 +404,37 @@ class _EditScreenState extends State<EditScreen> {
       onChanged: (u) {
         if (u != null) onChanged(u);
       },
+    );
+  }
+}
+
+/// The widget's background over a sample "wallpaper", to show the chosen transparency.
+class _WidgetPreview extends StatelessWidget {
+  const _WidgetPreview({required this.color, required this.opacity, required this.emoji});
+
+  final Color color;
+  final double opacity;
+  final String emoji;
+
+  @override
+  Widget build(BuildContext context) {
+    final radius = BorderRadius.circular(12);
+    return Container(
+      width: 56,
+      height: 56,
+      decoration: BoxDecoration(
+        borderRadius: radius,
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF8A9A5B), Color(0xFF35506B)],
+        ),
+      ),
+      child: Container(
+        decoration: BoxDecoration(borderRadius: radius, color: color.withValues(alpha: opacity)),
+        alignment: Alignment.center,
+        child: Text(emoji.trim().isEmpty ? '⏳' : emoji.trim(), style: const TextStyle(fontSize: 24)),
+      ),
     );
   }
 }

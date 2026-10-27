@@ -23,6 +23,7 @@ struct CooldownData: Codable, Identifiable {
     let waitForDone: Bool
     let display: String?
     let finishText: String?
+    let widgetOpacity: Double?
 
     var repeats: Bool { repeatValue > 0 }
     private var autoRepeats: Bool { repeats && !waitForDone }
@@ -207,7 +208,7 @@ struct Provider: AppIntentTimelineProvider {
             targetMs: Date().addingTimeInterval(3 * 86400).timeIntervalSince1970 * 1000,
             startMs: Date().timeIntervalSince1970 * 1000,
             repeatValue: 3, repeatUnit: "days", waitForDone: true, display: "days",
-            finishText: "Water your plants!")
+            finishText: "Water your plants!", widgetOpacity: 1)
         return CooldownEntry(date: Date(), cooldown: sample, format: "days")
     }
 
@@ -272,6 +273,7 @@ struct CooldownWidgetView: View {
         let label = finished ? (!message.isEmpty ? message : c.repeats ? "tap to mark done" : "🎉") : r.label
         let total = max(1, cycle.end.timeIntervalSince(cycle.start))
         let progress = min(1, max(0, entry.date.timeIntervalSince(cycle.start) / total))
+        let opacity = min(1, max(0, c.widgetOpacity ?? 1))
 
         switch family {
         case .accessoryInline:
@@ -308,8 +310,9 @@ struct CooldownWidgetView: View {
                     .padding(.top, 4)
             }
             .foregroundStyle(.white)
+            .shadow(color: .black.opacity(opacity < 1 ? 0.4 : 0), radius: 2, y: 1)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-            .containerBackground(for: .widget) { c.swiftColor }
+            .containerBackground(for: .widget) { c.swiftColor.opacity(opacity) }
         }
     }
 }

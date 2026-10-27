@@ -69,6 +69,7 @@ class Cooldown {
     this.display,
     this.finishText = '',
     this.alert = AlertMode.soundAndVibrate,
+    this.widgetOpacity = 1.0,
   });
 
   final String id;
@@ -98,6 +99,9 @@ class Cooldown {
 
   /// Only used when [notify] is on.
   AlertMode alert;
+
+  /// Opacity of the widget background in its colour: 0 = fully transparent, 1 = solid.
+  double widgetOpacity;
 
   /// null = use the app-wide default.
   DisplayFormat? display;
@@ -195,6 +199,7 @@ class Cooldown {
         'display': display?.key ?? 'default',
         'finishText': finishText,
         'alert': alert.key,
+        'widgetOpacity': widgetOpacity,
       };
 
   factory Cooldown.fromJson(Map<String, dynamic> j) => Cooldown(
@@ -214,6 +219,7 @@ class Cooldown {
             : DisplayFormat.fromKey(j['display'] as String),
         finishText: j['finishText'] as String? ?? '',
         alert: AlertMode.fromKey(j['alert'] as String?),
+        widgetOpacity: ((j['widgetOpacity'] as num?)?.toDouble() ?? 1.0).clamp(0.0, 1.0),
       );
 
   static String encodeList(List<Cooldown> list) => jsonEncode(list.map((c) => c.toJson()).toList());

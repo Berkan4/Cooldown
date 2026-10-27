@@ -38,6 +38,9 @@
             android:gravity="center"
             android:maxLines="1"
             android:textColor="#FFFFFF"
+            android:shadowColor="#66000000"
+            android:shadowDy="1"
+            android:shadowRadius="3"
             android:textSize="20sp"
             android:textStyle="bold" />
 
@@ -49,6 +52,9 @@
             android:gravity="center"
             android:maxLines="1"
             android:textColor="#E6FFFFFF"
+            android:shadowColor="#66000000"
+            android:shadowDy="1"
+            android:shadowRadius="3"
             android:textSize="10sp" />
 
         <ProgressBar

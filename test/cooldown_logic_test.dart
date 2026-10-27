@@ -84,6 +84,14 @@ void main() {
     expect(back.display, isNull);
     expect(back.finishText, '');
     expect(back.alert, AlertMode.soundAndVibrate);
+    expect(back.widgetOpacity, 1.0);
+  });
+
+  test('widget opacity survives json and is clamped', () {
+    final c = _make(target: DateTime(2026, 11, 19), start: DateTime(2026, 10, 27))..widgetOpacity = 0.35;
+    expect(Cooldown.decodeList(Cooldown.encodeList([c])).single.widgetOpacity, 0.35);
+    expect(Cooldown.fromJson(c.toJson()..['widgetOpacity'] = 3).widgetOpacity, 1.0);
+    expect(Cooldown.fromJson(c.toJson()..['widgetOpacity'] = 0).widgetOpacity, 0.0);
   });
 
   test('alert mode survives json and old data keeps sound + vibration', () {

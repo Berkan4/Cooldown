@@ -16,6 +16,7 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import kotlin.math.roundToInt
 
 /** How the title line is written in a layout. */
 private enum class TitleStyle { EMOJI_ONLY, STACKED, INLINE }
@@ -175,6 +176,7 @@ open class CooldownWidgetProvider : AppWidgetProvider() {
                 views.setViewVisibility(R.id.progress, View.GONE)
                 if (layout.showEnds) views.setTextViewText(R.id.ends, "")
                 views.setInt(R.id.bg, "setColorFilter", 0xFF6B6B6B.toInt())
+                views.setInt(R.id.bg, "setImageAlpha", 255)
                 views.setOnClickPendingIntent(R.id.root, configIntent(context, appWidgetId))
                 return views
             }
@@ -204,6 +206,7 @@ open class CooldownWidgetProvider : AppWidgetProvider() {
             views.setViewVisibility(R.id.progress, View.VISIBLE)
             views.setProgressBar(R.id.progress, 100, pct, false)
             views.setInt(R.id.bg, "setColorFilter", cooldown.color)
+            views.setInt(R.id.bg, "setImageAlpha", (cooldown.widgetOpacity * 255).roundToInt())
             views.setOnClickPendingIntent(R.id.root, openAppIntent(context))
             return views
         }
