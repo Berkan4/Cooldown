@@ -102,6 +102,25 @@ class _EditScreenState extends State<EditScreen> {
     super.dispose();
   }
 
+  /// Where the duration typed in "Ends in" would end, or null if it isn't valid.
+  DateTime? _durationEnd() {
+    final n = int.tryParse(_durValue.text.trim());
+    if (n == null || n <= 0) return null;
+    return addInterval(DateTime.now(), _durUnit, n);
+  }
+
+  void _switchMode(_Mode mode) => setState(() {
+        final end = _durationEnd();
+        if (_mode == _Mode.duration && mode == _Mode.date && end != null) {
+          // Carry the duration over: show the date & time it would have ended,
+          // and repeat on the same interval.
+          _date = end;
+          _repValue.text = _durValue.text.trim();
+          _repUnit = _durUnit;
+        }
+        _mode = mode;
+      });
+
   Future<void> _pickDate() async {
     final now = DateTime.now();
     final d = await showDatePicker(
@@ -291,10 +310,10 @@ class _EditScreenState extends State<EditScreen> {
               ButtonSegment(value: _Mode.date, label: Text('Date & time'), icon: Icon(Icons.event)),
             ],
             selected: {_mode},
-            onSelectionChanged: (s) => setState(() => _mode = s.first),
+            onSelectionChanged: (s) => _switchMode(s.first),
           ),
           const SizedBox(height: 16),
-          if (_mode == _Mode.duration)
+          if (_mode == _Mode.duration) ...[
             Row(
               children: [
                 SizedBox(
@@ -303,13 +322,22 @@ class _EditScreenState extends State<EditScreen> {
                     controller: _durValue,
                     keyboardType: TextInputType.number,
                     decoration: const InputDecoration(labelText: 'Ends in', border: OutlineInputBorder()),
+                    onChanged: (_) => setState(() {}),
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(child: _unitDropdown(_durUnit, (u) => setState(() => _durUnit = u))),
               ],
-            )
-          else
+            ),
+            if (_durationEnd() case final end?)
+              Padding(
+                padding: const EdgeInsets.only(top: 8, left: 4),
+                child: Text(
+                  'Ends ${DateFormat('EEE, d MMM yyyy · HH:mm').format(end)}',
+                  style: theme.textTheme.bodySmall,
+                ),
+              ),
+          ] else
             Row(
               children: [
                 Expanded(
