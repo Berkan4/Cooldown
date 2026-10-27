@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io' show Platform;
 
 import 'package:flutter/material.dart';
+import 'package:home_widget/home_widget.dart';
 import 'package:intl/intl.dart';
 
 import '../models/cooldown.dart';
@@ -9,6 +10,7 @@ import '../services/notifications.dart';
 import '../services/store.dart';
 import '../utils/colors.dart';
 import '../utils/format.dart';
+import 'detail_screen.dart';
 import 'edit_screen.dart';
 import 'settings_screen.dart';
 
@@ -24,17 +26,36 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   late final Timer _ticker;
+  StreamSubscription<Uri?>? _widgetClicks;
 
   @override
   void initState() {
     super.initState();
     _ticker = Timer.periodic(const Duration(seconds: 1), (_) => setState(() {}));
+    if (Platform.isAndroid || Platform.isIOS) {
+      // Tapping a widget opens the app on that widget's cooldown, whether the
+      // app was closed (initial launch) or still running (click stream).
+      HomeWidget.initiallyLaunchedFromHomeWidget().then(_openFromWidget, onError: (_) {});
+      _widgetClicks = HomeWidget.widgetClicked.listen(_openFromWidget, onError: (_) {});
+    }
   }
 
   @override
   void dispose() {
     _ticker.cancel();
+    _widgetClicks?.cancel();
     super.dispose();
+  }
+
+  /// Widget links look like `cooldown://open?id=<cooldown id>&homeWidget`.
+  void _openFromWidget(Uri? uri) {
+    final id = uri?.queryParameters['id'];
+    if (!mounted || id == null || widget.store.byId(id) == null) return;
+    final nav = Navigator.of(context);
+    nav.popUntil((route) => route.isFirst);
+    nav.push(MaterialPageRoute<void>(
+      builder: (_) => DetailScreen(store: widget.store, notifications: widget.notifications, cooldownId: id),
+    ));
   }
 
   Future<void> _openEditor([Cooldown? existing]) async {

@@ -323,6 +323,7 @@ struct CooldownWidgetView: View {
             .shadow(color: .black.opacity(opacity < 1 ? 0.4 : 0), radius: 2, y: 1)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
             .containerBackground(for: .widget) { c.swiftColor.opacity(opacity) }
+            .widgetURL(URL(string: "cooldown://open?id=\(c.id)&homeWidget"))
         }
     }
 }

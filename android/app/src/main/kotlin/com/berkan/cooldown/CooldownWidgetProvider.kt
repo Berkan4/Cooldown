@@ -8,6 +8,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.graphics.Color
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.util.SizeF
@@ -91,6 +92,7 @@ open class CooldownWidgetProvider : AppWidgetProvider() {
 
     companion object {
         const val ACTION_REFRESH = "com.berkan.cooldown.REFRESH"
+        private const val HOME_WIDGET_LAUNCH_ACTION = "es.antonborri.home_widget.action.LAUNCH"
         private const val HALF_HOUR_MS = 1_800_000L
 
         fun updateAll(context: Context) {
@@ -219,7 +221,7 @@ open class CooldownWidgetProvider : AppWidgetProvider() {
             views.setProgressBar(R.id.progress, 100, pct, false)
             views.setInt(R.id.bg, "setColorFilter", cooldown.color)
             views.setInt(R.id.bg, "setImageAlpha", (cooldown.widgetOpacity * 255).roundToInt())
-            views.setOnClickPendingIntent(R.id.root, openAppIntent(context))
+            views.setOnClickPendingIntent(R.id.root, openCooldownIntent(context, appWidgetId, cooldown.id))
             return views
         }
 
@@ -247,12 +249,19 @@ open class CooldownWidgetProvider : AppWidgetProvider() {
             )
         }
 
-        private fun openAppIntent(context: Context): PendingIntent {
+        /**
+         * Opens the app on this cooldown. Uses home_widget's launch action, which
+         * hands the link to Dart (HomeWidget.initiallyLaunchedFromHomeWidget /
+         * widgetClicked); see HomeScreen._openFromWidget.
+         */
+        private fun openCooldownIntent(context: Context, appWidgetId: Int, cooldownId: String): PendingIntent {
             val intent = Intent(context, MainActivity::class.java).apply {
+                action = HOME_WIDGET_LAUNCH_ACTION
+                data = Uri.parse("cooldown://open?id=${Uri.encode(cooldownId)}&homeWidget")
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
             }
             return PendingIntent.getActivity(
-                context, 1, intent,
+                context, 2000 + appWidgetId, intent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
             )
         }
