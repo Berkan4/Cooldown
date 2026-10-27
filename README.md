@@ -10,7 +10,7 @@ Cooldowns and countdowns for Android and iPhone, with home-screen widgets and re
 - **Reminder per cooldown:** off, silent, vibrate, sound, or sound + vibration. The ▶ button next to it shows a test reminder. On iPhone, vibration follows sound, so "Vibrate" arrives like "Silent". Repeating cooldowns queue the next 5 reminders, so they keep coming even if you don't open the app.
 - **Two list styles:** big coloured cards, or a compact list to see more at a glance (toggle in the top bar).
 - **Time format:** days by default. You can switch to weeks + days, hours, d/h/m or automatic, app-wide in Settings or per cooldown.
-- **Widgets are optional.** Each widget shows one cooldown you pick. Its background uses the cooldown's colour, and a slider in the editor sets how see-through it is, from solid to fully transparent:
+- **Widgets are optional.** Each widget shows one cooldown you pick. Its background uses the cooldown's colour, and a slider in the editor sets how see-through it is, from solid to fully transparent. On Android each widget can override that: long-press it → settings (the cooldown itself is chosen when the widget is added):
   - Android: a picker appears when you add the widget (long-press the widget → reconfigure to change it). You can also tap ⋮ → "Add to home screen" in the app.
     Tapping a widget opens that cooldown in the app (with a Done button when it is ready).
     The widget picker offers three starting sizes: **Cooldown 1x1**, **Cooldown 1x2** and **Cooldown 4x2**. "Add to home screen" in the app uses 1x1. Each one can be resized from 1x1 up to 4x2 and bigger. 1x1, 1x2, 2x1 (up to 4x1), 2x2 and 4x2 each get their own layout; 4x2 also shows the end date.

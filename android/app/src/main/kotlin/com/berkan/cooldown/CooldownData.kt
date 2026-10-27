@@ -17,6 +17,16 @@ fun prefs(context: Context): SharedPreferences =
 
 fun widgetKey(appWidgetId: Int) = "widget_$appWidgetId"
 
+/** Per-widget background opacity (0..1), set in the widget's settings. Absent = use the cooldown's. */
+fun widgetOpacityKey(appWidgetId: Int) = "widget_opacity_$appWidgetId"
+
+fun widgetOpacity(p: SharedPreferences, appWidgetId: Int, cooldown: Cooldown): Double =
+    if (p.contains(widgetOpacityKey(appWidgetId))) {
+        p.getFloat(widgetOpacityKey(appWidgetId), 1f).toDouble().coerceIn(0.0, 1.0)
+    } else {
+        cooldown.widgetOpacity
+    }
+
 /** Kotlin mirror of lib/models/cooldown.dart — keep the logic in sync. */
 data class Cooldown(
     val id: String,

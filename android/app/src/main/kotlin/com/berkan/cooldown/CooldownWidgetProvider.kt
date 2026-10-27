@@ -79,7 +79,7 @@ open class CooldownWidgetProvider : AppWidgetProvider() {
 
     override fun onDeleted(context: Context, appWidgetIds: IntArray) {
         val editor = prefs(context).edit()
-        appWidgetIds.forEach { editor.remove(widgetKey(it)) }
+        appWidgetIds.forEach { editor.remove(widgetKey(it)).remove(widgetOpacityKey(it)) }
         editor.apply()
     }
 
@@ -92,6 +92,9 @@ open class CooldownWidgetProvider : AppWidgetProvider() {
 
     companion object {
         const val ACTION_REFRESH = "com.berkan.cooldown.REFRESH"
+        const val TEXT_DARK = 0xDD000000.toInt()
+        const val MUTED_DARK = 0xB3000000.toInt()
+        const val MUTED_LIGHT = 0xE6FFFFFF.toInt()
         private const val HOME_WIDGET_LAUNCH_ACTION = "es.antonborri.home_widget.action.LAUNCH"
         private const val HALF_HOUR_MS = 1_800_000L
 
@@ -118,7 +121,9 @@ open class CooldownWidgetProvider : AppWidgetProvider() {
                 val cooldownId = p.getString(widgetKey(id), null)
                 val cooldown = all.firstOrNull { it.id == cooldownId }
                 val format = cooldown?.let { if (it.display == "default") defaultFormat else it.display } ?: defaultFormat
-                fun build(layout: WidgetLayout) = buildViews(context, layout, id, cooldownId, cooldown, format, now)
+                val opacity = cooldown?.let { widgetOpacity(p, id, it) } ?: 1.0
+                fun build(layout: WidgetLayout) =
+                    buildViews(context, layout, id, cooldownId, cooldown, format, opacity, now)
 
                 val views = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                     // The launcher switches between these by itself while resizing.
@@ -168,16 +173,17 @@ open class CooldownWidgetProvider : AppWidgetProvider() {
             cooldownId: String?,
             cooldown: Cooldown?,
             format: String,
+            opacity: Double,
             now: Long,
         ): RemoteViews {
             val views = RemoteViews(context.packageName, layout.layoutId)
 
             // Dark text on very light colours (same rule as foregroundOn() in Dart),
             // unless the background is mostly see-through.
-            val darkText = cooldown != null && cooldown.widgetOpacity >= 0.5 &&
+            val darkText = cooldown != null && opacity >= 0.5 &&
                 Color.luminance(cooldown.color) > 0.6f
-            val text = if (darkText) 0xDD000000.toInt() else Color.WHITE
-            val muted = if (darkText) 0xB3000000.toInt() else 0xE6FFFFFF.toInt()
+            val text = if (darkText) TEXT_DARK else Color.WHITE
+            val muted = if (darkText) MUTED_DARK else MUTED_LIGHT
             views.setTextColor(R.id.title, text)
             views.setTextColor(R.id.value, text)
             views.setTextColor(R.id.label, muted)
@@ -220,7 +226,7 @@ open class CooldownWidgetProvider : AppWidgetProvider() {
             views.setViewVisibility(R.id.progress, View.VISIBLE)
             views.setProgressBar(R.id.progress, 100, pct, false)
             views.setInt(R.id.bg, "setColorFilter", cooldown.color)
-            views.setInt(R.id.bg, "setImageAlpha", (cooldown.widgetOpacity * 255).roundToInt())
+            views.setInt(R.id.bg, "setImageAlpha", (opacity * 255).roundToInt())
             views.setOnClickPendingIntent(R.id.root, openCooldownIntent(context, appWidgetId, cooldown.id))
             return views
         }

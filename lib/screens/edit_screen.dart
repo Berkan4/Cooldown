@@ -1,3 +1,5 @@
+import 'dart:io' show Platform;
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -256,6 +258,12 @@ class _EditScreenState extends State<EditScreen> {
                       label: '${(_widgetOpacity * 100).round()}%',
                       onChanged: (v) => setState(() => _widgetOpacity = v),
                     ),
+                    if (Platform.isAndroid)
+                      Text(
+                        'Default for this cooldown’s widgets. To change a single widget, '
+                        'long-press it on the home screen and open its settings.',
+                        style: theme.textTheme.bodySmall,
+                      ),
                   ],
                 ),
               ),
