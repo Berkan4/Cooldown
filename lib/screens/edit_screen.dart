@@ -45,6 +45,10 @@ class _EditScreenState extends State<EditScreen> {
 
   late int _color;
   late double _widgetOpacity;
+
+  /// Until the slider is moved here, follow changes made from the widget's
+  /// settings (the store reloads when the app comes back to the front).
+  bool _opacityTouched = false;
   late _Mode _mode;
   RepeatUnit _durUnit = RepeatUnit.days;
   late DateTime _date;
@@ -69,6 +73,7 @@ class _EditScreenState extends State<EditScreen> {
     _repValue = TextEditingController(text: '${_base.repeats ? _base.repeatValue : 1}');
     _color = _base.color;
     _widgetOpacity = _base.widgetOpacity;
+    widget.store.addListener(_syncOpacity);
     _mode = _isNew ? _Mode.duration : _Mode.date;
     _date = _base.currentEnd(now);
     _originalDate = _date;
@@ -80,8 +85,15 @@ class _EditScreenState extends State<EditScreen> {
     _display = _base.display;
   }
 
+  void _syncOpacity() {
+    final latest = widget.store.byId(_base.id);
+    if (_opacityTouched || latest == null || latest.widgetOpacity == _widgetOpacity) return;
+    setState(() => _widgetOpacity = latest.widgetOpacity);
+  }
+
   @override
   void dispose() {
+    widget.store.removeListener(_syncOpacity);
     _name.dispose();
     _emoji.dispose();
     _finishText.dispose();
@@ -256,12 +268,15 @@ class _EditScreenState extends State<EditScreen> {
                       value: _widgetOpacity,
                       divisions: 20,
                       label: '${(_widgetOpacity * 100).round()}%',
-                      onChanged: (v) => setState(() => _widgetOpacity = v),
+                      onChanged: (v) => setState(() {
+                        _widgetOpacity = v;
+                        _opacityTouched = true;
+                      }),
                     ),
                     if (Platform.isAndroid)
                       Text(
-                        'Default for this cooldown’s widgets. To change a single widget, '
-                        'long-press it on the home screen and open its settings.',
+                        'Same setting as in the widget’s own settings '
+                        '(long-press the widget on the home screen).',
                         style: theme.textTheme.bodySmall,
                       ),
                   ],

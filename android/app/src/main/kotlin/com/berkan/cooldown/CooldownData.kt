@@ -17,15 +17,35 @@ fun prefs(context: Context): SharedPreferences =
 
 fun widgetKey(appWidgetId: Int) = "widget_$appWidgetId"
 
-/** Per-widget background opacity (0..1), set in the widget's settings. Absent = use the cooldown's. */
-fun widgetOpacityKey(appWidgetId: Int) = "widget_opacity_$appWidgetId"
+/** Per-widget opacity from an earlier build; folded into the cooldown by [migrateWidgetOpacity]. */
+fun legacyWidgetOpacityKey(appWidgetId: Int) = "widget_opacity_$appWidgetId"
 
-fun widgetOpacity(p: SharedPreferences, appWidgetId: Int, cooldown: Cooldown): Double =
-    if (p.contains(widgetOpacityKey(appWidgetId))) {
-        p.getFloat(widgetOpacityKey(appWidgetId), 1f).toDouble().coerceIn(0.0, 1.0)
-    } else {
-        cooldown.widgetOpacity
+/**
+ * Sets the cooldown's widget transparency in the JSON the app stores, so the
+ * app's editor and the widget settings always show the same value. Only that
+ * one field is touched; the app reloads the list when it comes to the front.
+ */
+fun saveWidgetOpacity(context: Context, cooldownId: String, opacity: Double) {
+    val p = prefs(context)
+    val arr = JSONArray(p.getString("cooldowns", null) ?: return)
+    for (i in 0 until arr.length()) {
+        val o = arr.getJSONObject(i)
+        if (o.optString("id") == cooldownId) o.put("widgetOpacity", opacity.coerceIn(0.0, 1.0))
     }
+    p.edit().putString("cooldowns", arr.toString()).apply()
+}
+
+/** Moves per-widget values from an earlier build into their cooldowns. */
+fun migrateWidgetOpacity(context: Context, appWidgetIds: IntArray) {
+    val p = prefs(context)
+    for (id in appWidgetIds) {
+        val key = legacyWidgetOpacityKey(id)
+        if (!p.contains(key)) continue
+        val cooldownId = p.getString(widgetKey(id), null)
+        if (cooldownId != null) saveWidgetOpacity(context, cooldownId, p.getFloat(key, 1f).toDouble())
+        p.edit().remove(key).apply()
+    }
+}
 
 /** Kotlin mirror of lib/models/cooldown.dart — keep the logic in sync. */
 data class Cooldown(

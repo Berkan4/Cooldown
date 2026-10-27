@@ -79,7 +79,7 @@ open class CooldownWidgetProvider : AppWidgetProvider() {
 
     override fun onDeleted(context: Context, appWidgetIds: IntArray) {
         val editor = prefs(context).edit()
-        appWidgetIds.forEach { editor.remove(widgetKey(it)).remove(widgetOpacityKey(it)) }
+        appWidgetIds.forEach { editor.remove(widgetKey(it)).remove(legacyWidgetOpacityKey(it)) }
         editor.apply()
     }
 
@@ -112,6 +112,7 @@ open class CooldownWidgetProvider : AppWidgetProvider() {
                 }
             }
 
+            migrateWidgetOpacity(context, ids)
             val all = Cooldown.loadAll(context)
             val defaultFormat = p.getString("default_display", "days") ?: "days"
             val now = System.currentTimeMillis()
@@ -121,7 +122,7 @@ open class CooldownWidgetProvider : AppWidgetProvider() {
                 val cooldownId = p.getString(widgetKey(id), null)
                 val cooldown = all.firstOrNull { it.id == cooldownId }
                 val format = cooldown?.let { if (it.display == "default") defaultFormat else it.display } ?: defaultFormat
-                val opacity = cooldown?.let { widgetOpacity(p, id, it) } ?: 1.0
+                val opacity = cooldown?.widgetOpacity ?: 1.0
                 fun build(layout: WidgetLayout) =
                     buildViews(context, layout, id, cooldownId, cooldown, format, opacity, now)
 

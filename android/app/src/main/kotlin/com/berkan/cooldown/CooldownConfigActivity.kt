@@ -67,7 +67,6 @@ class CooldownConfigActivity : Activity() {
     private fun showSettings(cooldown: Cooldown) {
         title = "Widget background"
         setContentView(R.layout.widget_settings)
-        val p = prefs(this)
         val seek = findViewById<SeekBar>(R.id.opacity)
         val label = findViewById<TextView>(R.id.opacity_label)
         val previewBg = findViewById<ImageView>(R.id.preview_bg)
@@ -85,7 +84,7 @@ class CooldownConfigActivity : Activity() {
             previewText.setTextColor(if (darkText) CooldownWidgetProvider.TEXT_DARK else Color.WHITE)
         }
 
-        seek.progress = (widgetOpacity(p, appWidgetId, cooldown) * 20).roundToInt()
+        seek.progress = (cooldown.widgetOpacity * 20).roundToInt()
         show(seek.progress)
         seek.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(bar: SeekBar, progress: Int, fromUser: Boolean) = show(progress)
@@ -93,12 +92,9 @@ class CooldownConfigActivity : Activity() {
             override fun onStopTrackingTouch(bar: SeekBar) {}
         })
 
-        findViewById<Button>(R.id.reset).setOnClickListener {
-            p.edit().remove(widgetOpacityKey(appWidgetId)).apply()
-            done()
-        }
         findViewById<Button>(R.id.done).setOnClickListener {
-            p.edit().putFloat(widgetOpacityKey(appWidgetId), seek.progress / 20f).apply()
+            // Saved on the cooldown itself: the app's editor shows the same value.
+            saveWidgetOpacity(this, cooldown.id, seek.progress / 20.0)
             done()
         }
     }

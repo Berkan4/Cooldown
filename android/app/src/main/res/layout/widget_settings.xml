@@ -65,13 +65,6 @@
         android:orientation="horizontal">
 
         <Button
-            android:id="@+id/reset"
-            style="?android:attr/borderlessButtonStyle"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Use cooldown's setting" />
-
-        <Button
             android:id="@+id/done"
             style="?android:attr/borderlessButtonStyle"
             android:layout_width="wrap_content"
