@@ -50,7 +50,11 @@ private val DEFAULT_LAYOUT = LAYOUTS[3]
 private fun layoutFor(widthDp: Float, heightDp: Float): WidgetLayout =
     LAYOUTS.filter { it.fits(widthDp, heightDp) }.maxByOrNull { it.area } ?: LAYOUTS.first()
 
-class CooldownWidgetProvider : AppWidgetProvider() {
+/** Same widget, other starting sizes in the widget picker (see res/xml/cooldown_widget_info_*.xml). */
+class CooldownWidgetTallProvider : CooldownWidgetProvider()
+class CooldownWidgetLargeProvider : CooldownWidgetProvider()
+
+open class CooldownWidgetProvider : AppWidgetProvider() {
 
     override fun onUpdate(context: Context, manager: AppWidgetManager, appWidgetIds: IntArray) {
         updateAll(context)
@@ -77,6 +81,8 @@ class CooldownWidgetProvider : AppWidgetProvider() {
     }
 
     override fun onDisabled(context: Context) {
+        // Called per picker entry; keep refreshing while any Cooldown widget is left.
+        if (allWidgetIds(context).isNotEmpty()) return
         val am = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         am.cancel(refreshIntent(context))
     }
@@ -87,7 +93,7 @@ class CooldownWidgetProvider : AppWidgetProvider() {
 
         fun updateAll(context: Context) {
             val manager = AppWidgetManager.getInstance(context)
-            val ids = manager.getAppWidgetIds(ComponentName(context, CooldownWidgetProvider::class.java))
+            val ids = allWidgetIds(context)
             val p = prefs(context)
 
             // A widget pinned from inside the app gets the cooldown the user picked there.
@@ -130,6 +136,17 @@ class CooldownWidgetProvider : AppWidgetProvider() {
             }
 
             if (ids.isNotEmpty()) scheduleRefresh(context, nextRefresh)
+        }
+
+        private val PROVIDERS = listOf(
+            CooldownWidgetProvider::class.java,
+            CooldownWidgetTallProvider::class.java,
+            CooldownWidgetLargeProvider::class.java,
+        )
+
+        fun allWidgetIds(context: Context): IntArray {
+            val manager = AppWidgetManager.getInstance(context)
+            return PROVIDERS.flatMap { manager.getAppWidgetIds(ComponentName(context, it)).asList() }.toIntArray()
         }
 
         /** Before Android 12: portrait size is min width x max height. */

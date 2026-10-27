@@ -1,16 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Starts at 2x2 but can be resized down to 1x1 and up to any size.
+<!-- Picker entry "Cooldown 1x1" (also used by "Add to home screen" in the app).
+     Every Cooldown widget entry can be resized from 1x1 up to any size;
      CooldownWidgetProvider picks a layout that fits the current size. -->
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
     android:configure="com.berkan.cooldown.CooldownConfigActivity"
     android:description="@string/widget_description"
-    android:initialLayout="@layout/cooldown_widget"
-    android:minWidth="110dp"
-    android:minHeight="110dp"
+    android:initialLayout="@layout/cooldown_widget_tiny"
+    android:minWidth="40dp"
+    android:minHeight="40dp"
     android:minResizeWidth="40dp"
     android:minResizeHeight="40dp"
-    android:targetCellWidth="2"
-    android:targetCellHeight="2"
+    android:targetCellWidth="1"
+    android:targetCellHeight="1"
     android:resizeMode="horizontal|vertical"
     android:updatePeriodMillis="1800000"
     android:widgetCategory="home_screen"

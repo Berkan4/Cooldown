@@ -28,17 +28,40 @@
             </intent-filter>
         </activity>
 
-        <!-- Home-screen widget -->
+        <!-- Home-screen widget: the same widget three times, so the picker offers
+             1x1, 1x2 and 4x2 as starting sizes. All of them can be resized freely. -->
         <receiver
             android:name=".CooldownWidgetProvider"
             android:exported="true"
-            android:label="Cooldown">
+            android:label="Cooldown 1x1">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/cooldown_widget_info" />
+        </receiver>
+        <receiver
+            android:name=".CooldownWidgetTallProvider"
+            android:exported="true"
+            android:label="Cooldown 1x2">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/cooldown_widget_info_tall" />
+        </receiver>
+        <receiver
+            android:name=".CooldownWidgetLargeProvider"
+            android:exported="true"
+            android:label="Cooldown 4x2">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/cooldown_widget_info_large" />
         </receiver>
 
         <!-- "Which cooldown should this widget show?" picker -->
