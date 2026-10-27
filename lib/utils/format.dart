@@ -71,3 +71,10 @@ String describeRepeat(Cooldown c) {
       : 'Every ${c.repeatValue} ${c.repeatUnit.plural}';
   return c.waitForDone ? '$every · after done' : every;
 }
+
+/// " · vibrate", " · no reminder" … ; empty for the default (sound + vibration).
+String alertSuffix(Cooldown c) {
+  if (!c.notify) return ' · no reminder';
+  if (c.alert == AlertMode.soundAndVibrate) return '';
+  return ' · ${c.alert.label.toLowerCase()}';
+}

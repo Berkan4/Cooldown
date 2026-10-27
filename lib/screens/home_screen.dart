@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import '../models/cooldown.dart';
 import '../services/notifications.dart';
 import '../services/store.dart';
+import '../utils/colors.dart';
 import '../utils/format.dart';
 import 'edit_screen.dart';
 import 'settings_screen.dart';
@@ -165,7 +166,13 @@ class _CooldownCard extends StatelessWidget {
     final totalMs = end.difference(begin).inMilliseconds;
     final progress = totalMs <= 0 ? 1.0 : (now.difference(begin).inMilliseconds / totalMs).clamp(0.0, 1.0);
 
+    // Same look as the widget: solid in the cooldown's colour (the widget
+    // transparency setting does not apply here).
+    final fg = foregroundOn(accent);
+    final muted = fg.withValues(alpha: 0.8);
+
     return Card(
+      color: accent,
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
@@ -182,23 +189,19 @@ class _CooldownCard extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(c.name, style: theme.textTheme.titleMedium, overflow: TextOverflow.ellipsis),
                         Text(
-                          '${describeRepeat(c)}${_alertSuffix(c)}',
-                          style: theme.textTheme.bodySmall,
+                          c.name,
+                          style: theme.textTheme.titleMedium?.copyWith(color: fg, fontWeight: FontWeight.w600),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Text(
+                          '${describeRepeat(c)}${alertSuffix(c)}',
+                          style: theme.textTheme.bodySmall?.copyWith(color: muted),
                         ),
                       ],
                     ),
                   ),
-                  PopupMenuButton<_Action>(
-                    onSelected: onAction,
-                    itemBuilder: (_) => [
-                      const PopupMenuItem(value: _Action.edit, child: Text('Edit')),
-                      if (c.repeats) const PopupMenuItem(value: _Action.restart, child: Text('Restart now')),
-                      const PopupMenuItem(value: _Action.widget, child: Text('Add to home screen')),
-                      const PopupMenuItem(value: _Action.delete, child: Text('Delete')),
-                    ],
-                  ),
+                  _ActionsMenu(cooldown: c, onAction: onAction, color: fg),
                 ],
               ),
               const SizedBox(height: 8),
@@ -209,14 +212,14 @@ class _CooldownCard extends StatelessWidget {
                   children: [
                     if (finished)
                       Text(c.repeats ? 'Ready' : 'Done 🎉',
-                          style: theme.textTheme.headlineMedium?.copyWith(color: accent, fontWeight: FontWeight.w700))
+                          style: theme.textTheme.headlineMedium?.copyWith(color: fg, fontWeight: FontWeight.w700))
                     else ...[
                       Text(remaining.value,
-                          style: theme.textTheme.headlineMedium?.copyWith(color: accent, fontWeight: FontWeight.w700)),
+                          style: theme.textTheme.headlineMedium?.copyWith(color: fg, fontWeight: FontWeight.w700)),
                       const SizedBox(width: 6),
                       Padding(
                         padding: const EdgeInsets.only(bottom: 5),
-                        child: Text(remaining.label, style: theme.textTheme.bodyMedium),
+                        child: Text(remaining.label, style: theme.textTheme.bodyMedium?.copyWith(color: muted)),
                       ),
                     ],
                     const Spacer(),
@@ -225,7 +228,7 @@ class _CooldownCard extends StatelessWidget {
                         onPressed: onDone,
                         icon: const Icon(Icons.check),
                         label: const Text('Done'),
-                        style: FilledButton.styleFrom(backgroundColor: accent),
+                        style: FilledButton.styleFrom(backgroundColor: fg, foregroundColor: accent),
                       ),
                   ],
                 ),
@@ -233,7 +236,8 @@ class _CooldownCard extends StatelessWidget {
               if (finished && c.finishText.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.only(top: 4, right: 12),
-                  child: Text(c.finishText, style: theme.textTheme.titleSmall?.copyWith(color: accent)),
+                  child: Text(c.finishText,
+                      style: theme.textTheme.titleSmall?.copyWith(color: fg, fontWeight: FontWeight.w600)),
                 ),
               const SizedBox(height: 8),
               Padding(
@@ -243,15 +247,15 @@ class _CooldownCard extends StatelessWidget {
                   child: LinearProgressIndicator(
                     value: progress,
                     minHeight: 6,
-                    color: accent,
-                    backgroundColor: accent.withValues(alpha: 0.15),
+                    color: fg,
+                    backgroundColor: fg.withValues(alpha: 0.25),
                   ),
                 ),
               ),
               const SizedBox(height: 6),
               Text(
                 finished ? 'Ended ${_fmtDate(end)}' : 'Ends ${_fmtDate(end)}',
-                style: theme.textTheme.bodySmall,
+                style: theme.textTheme.bodySmall?.copyWith(color: muted),
               ),
             ],
           ),
@@ -260,14 +264,31 @@ class _CooldownCard extends StatelessWidget {
     );
   }
 
-  static String _alertSuffix(Cooldown c) {
-    if (!c.notify) return ' · no reminder';
-    if (c.alert == AlertMode.soundAndVibrate) return '';
-    return ' · ${c.alert.label.toLowerCase()}';
-  }
-
   static String _fmtDate(DateTime d) => DateFormat('EEE, d MMM yyyy · HH:mm').format(d);
 }
+
+class _ActionsMenu extends StatelessWidget {
+  const _ActionsMenu({required this.cooldown, required this.onAction, this.color});
+
+  final Cooldown cooldown;
+  final ValueChanged<_Action> onAction;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) {
+    return PopupMenuButton<_Action>(
+      iconColor: color,
+      onSelected: onAction,
+      itemBuilder: (_) => [
+        const PopupMenuItem(value: _Action.edit, child: Text('Edit')),
+        if (cooldown.repeats) const PopupMenuItem(value: _Action.restart, child: Text('Restart now')),
+        const PopupMenuItem(value: _Action.widget, child: Text('Add to home screen')),
+        const PopupMenuItem(value: _Action.delete, child: Text('Delete')),
+      ],
+    );
+  }
+}
+
 
 class _EmptyState extends StatelessWidget {
   const _EmptyState();
