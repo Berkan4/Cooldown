@@ -17,6 +17,7 @@ const String kAndroidWidgetQualified = 'com.berkan.cooldown.CooldownWidgetProvid
 const _kCooldowns = 'cooldowns';
 const _kDefaultDisplay = 'default_display';
 const _kPendingPin = 'pending_pin';
+const _kListView = 'list_view';
 
 /// Single source of truth. Everything is stored in the widget-shared storage
 /// (SharedPreferences "HomeWidgetPreferences" on Android, App Group
@@ -27,6 +28,7 @@ class CooldownStore extends ChangeNotifier {
   final NotificationService _notifications;
   final List<Cooldown> _items = [];
   DisplayFormat _defaultDisplay = DisplayFormat.days;
+  bool _compactList = false;
 
   List<Cooldown> get items {
     final now = DateTime.now();
@@ -36,6 +38,9 @@ class CooldownStore extends ChangeNotifier {
   }
 
   DisplayFormat get defaultDisplay => _defaultDisplay;
+
+  /// Home screen shows small rows instead of big cards.
+  bool get compactList => _compactList;
   DisplayFormat displayFor(Cooldown c) => c.display ?? _defaultDisplay;
 
   Future<void> load() async {
@@ -45,6 +50,7 @@ class CooldownStore extends ChangeNotifier {
       ..clear()
       ..addAll(Cooldown.decodeList(raw));
     _defaultDisplay = DisplayFormat.fromKey(await HomeWidget.getWidgetData<String>(_kDefaultDisplay));
+    _compactList = await HomeWidget.getWidgetData<String>(_kListView) == 'compact';
     notifyListeners();
     // Re-schedule on every launch: keeps repeating reminders topped up.
     await _notifications.rescheduleAll(_items);
@@ -106,6 +112,12 @@ class CooldownStore extends ChangeNotifier {
     await HomeWidget.saveWidgetData<String>(_kDefaultDisplay, f.key);
     notifyListeners();
     await _refreshWidgets();
+  }
+
+  Future<void> setCompactList(bool compact) async {
+    _compactList = compact;
+    notifyListeners();
+    await HomeWidget.saveWidgetData<String>(_kListView, compact ? 'compact' : 'cards');
   }
 
   /// Android: asks the launcher to pin a widget showing [c].

@@ -83,10 +83,16 @@ class _HomeScreenState extends State<HomeScreen> {
       listenable: widget.store,
       builder: (context, _) {
         final items = widget.store.items;
+        final compact = widget.store.compactList;
         return Scaffold(
           appBar: AppBar(
             title: const Text('Cooldowns'),
             actions: [
+              IconButton(
+                icon: Icon(compact ? Icons.view_agenda_outlined : Icons.view_list_outlined),
+                tooltip: compact ? 'Card view' : 'Compact list',
+                onPressed: () => widget.store.setCompactList(!compact),
+              ),
               IconButton(
                 icon: const Icon(Icons.settings_outlined),
                 tooltip: 'Settings',
@@ -106,26 +112,28 @@ class _HomeScreenState extends State<HomeScreen> {
               : ListView.separated(
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
                   itemCount: items.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 12),
+                  separatorBuilder: (_, __) => SizedBox(height: compact ? 6 : 12),
                   itemBuilder: (context, i) {
                     final c = items[i];
-                    return _CooldownCard(
+                    void onAction(_Action action) {
+                      switch (action) {
+                        case _Action.edit:
+                          _openEditor(c);
+                        case _Action.restart:
+                          widget.store.markDone(c);
+                        case _Action.widget:
+                          _addWidget(c);
+                        case _Action.delete:
+                          _confirmDelete(c);
+                      }
+                    }
+
+                    return (compact ? _CooldownRow.new : _CooldownCard.new)(
                       cooldown: c,
                       format: widget.store.displayFor(c),
                       onTap: () => _openEditor(c),
                       onDone: () => widget.store.markDone(c),
-                      onAction: (action) {
-                        switch (action) {
-                          case _Action.edit:
-                            _openEditor(c);
-                          case _Action.restart:
-                            widget.store.markDone(c);
-                          case _Action.widget:
-                            _addWidget(c);
-                          case _Action.delete:
-                            _confirmDelete(c);
-                        }
-                      },
+                      onAction: onAction,
                     );
                   },
                 ),
@@ -265,6 +273,105 @@ class _CooldownCard extends StatelessWidget {
   }
 
   static String _fmtDate(DateTime d) => DateFormat('EEE, d MMM yyyy · HH:mm').format(d);
+}
+
+/// One line per cooldown, to see many at a glance.
+class _CooldownRow extends StatelessWidget {
+  const _CooldownRow({
+    required this.cooldown,
+    required this.format,
+    required this.onTap,
+    required this.onDone,
+    required this.onAction,
+  });
+
+  final Cooldown cooldown;
+  final DisplayFormat format;
+  final VoidCallback onTap;
+  final VoidCallback onDone;
+  final ValueChanged<_Action> onAction;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = cooldown;
+    final now = DateTime.now();
+    final end = c.currentEnd(now);
+    final begin = c.currentStart(now);
+    final finished = !end.isAfter(now);
+    final remaining = formatRemaining(now, end, format);
+    final accent = Color(c.color);
+    final theme = Theme.of(context);
+    final totalMs = end.difference(begin).inMilliseconds;
+    final progress = totalMs <= 0 ? 1.0 : (now.difference(begin).inMilliseconds / totalMs).clamp(0.0, 1.0);
+    final value = finished ? (c.repeats ? 'Ready' : 'Done') : remaining.value;
+    final label = finished ? '' : remaining.label;
+
+    return Card(
+      margin: EdgeInsets.zero,
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(10, 6, 2, 6),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(color: accent, borderRadius: BorderRadius.circular(10)),
+                child: Text(c.emoji, style: const TextStyle(fontSize: 20)),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(c.name, style: theme.textTheme.titleSmall, maxLines: 1, overflow: TextOverflow.ellipsis),
+                    const SizedBox(height: 6),
+                    if (finished && c.finishText.isNotEmpty)
+                      Text(c.finishText, style: theme.textTheme.bodySmall, maxLines: 1, overflow: TextOverflow.ellipsis)
+                    else
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(2),
+                        child: LinearProgressIndicator(
+                          value: progress,
+                          minHeight: 4,
+                          color: accent,
+                          backgroundColor: accent.withValues(alpha: 0.2),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 130),
+                child: Text.rich(
+                  TextSpan(children: [
+                    TextSpan(text: value, style: const TextStyle(fontWeight: FontWeight.w700)),
+                    if (label.isNotEmpty) TextSpan(text: ' $label', style: theme.textTheme.bodySmall),
+                  ]),
+                  style: theme.textTheme.titleMedium,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              if (finished && c.repeats && c.waitForDone)
+                IconButton.filled(
+                  tooltip: 'Done',
+                  onPressed: onDone,
+                  icon: const Icon(Icons.check),
+                  style: IconButton.styleFrom(backgroundColor: accent, foregroundColor: foregroundOn(accent)),
+                )
+              else
+                _ActionsMenu(cooldown: c, onAction: onAction),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _ActionsMenu extends StatelessWidget {
